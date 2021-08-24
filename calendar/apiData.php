@@ -1,20 +1,13 @@
 <?php
+    
 
     require '../include/database.php';
 
-
     if(!empty($_POST)){
         $post = $_POST;
-        $inputs = $_POST;
-        $clinica = $inputs['clinica'];
-       foreach($post as $k => $d) {
-           $post = json_decode($k);
-       }
     }
 
-
-
-   // $conexion=mysqli_connect('localhost','root','','calendar')or die('no se pudo conectar a la base de datos');
+   //Constantes a Cambiar 
     $token = [];
     $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
     $client_secret = "IqHYGkvrsN7eFfRe";
@@ -61,8 +54,6 @@
         curl_close($curl);
 
         return $output;
-
-
 
     }
 
@@ -150,6 +141,31 @@
         return $output;
     }
 
+    function createAppointment($data, $id){
+        global $OrganizationID;
+        global $token;
+
+        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/appointments/'. $id);
+        $body = json_encode($data);
+
+
+
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+            'Authorization: Bearer '. $token,
+            'Organization-ID: '. $OrganizationID,
+        ));
+
+        $output = curl_exec($curl);
+
+        curl_close($curl);
+
+
+        return $output;
+    }
+
     function deleteAppointment($id){
         global $OrganizationID;
         global $token;
@@ -182,19 +198,37 @@
         return $result;
     }
 
-    function insertInDatabase($table, $columns, $id) {
+    function insertInDatabase($table, $data) {
         global $conexion;
 
-        $c = implode(",", array_keys($columns));
-        $d = implode(", ", array_values($columns));
+        $c = implode(",", array_keys($data));
+        $d = implode(", ", array_values($data));
+
+        $template ="";
+        $values = "";
+        $result = [];
 
 
-        $sql = "INSERT INTO $table ($c) VALUES (?,?,?,?,?)";
+        foreach ($data as $columns) {
+            if (!empty($template)) {
+                $template .= ",?";            
+            } else {
+                $template .="?";
+            }
+            $values .="s";
+        }
+
+        $sql = "INSERT INTO $table ($c) VALUES ($template)";
         $conn = $conexion->prepare($sql);
-        $conn->bind_param("s,s,s,s,s", $d[0], $d[1], $d[2], $d[3], $d[4],);
-        $conn->execute();
+        $conn->bind_param($values, ...array_values($data));
+        
         $result = $conn->get_result();
-        return $conexion->error;
+
+        if ($conn->execute()) {
+            return true;
+        } else {
+           return false;
+        }
     }
 
     function retrieveLocationId($location) {
@@ -246,117 +280,102 @@
 
     function syncApiAppointment($dataApi) {
 
-        global $conexion;
+        print_r($dataApi);
+        die();
 
-        $result = [];
+        $resSync =[];
+        $resSync['synced'] = false;
+
         foreach ($dataApi as $data) {
-
-            $location = $data->operatoryData->name;
-            $locationId = retrieveLocationId($location);
-
-
-
 
             $resultDB =findInDatabase("appointment", $data->id, "api_appointment_id");
 
             if($resultDB->num_rows == 0) {
-             $resultPT = findInDatabase("patient", $data->patientData->chartNumber, "id_paciente");
 
+                $operatory = getDataByParam($data->operatory->url);
+                $data->operatoryData = json_decode($operatory)->data;
+                //$data->resourceId = $data->operatoryData->shortName;
+
+
+
+                $clinica = getDataByParam($data->location->url);
+                $data->locationData = json_decode($clinica)->data;
+                $data->operatoryData->location = $data->locationData->name;
+
+                $location = $data->operatoryData->name;
+                $locationId = retrieveLocationId($location);
+                $patient_id = $data->patient->id;
+
+                echo"Cita no esta enDatabase";
+                //* ALERT -- ALERT   *//
+                //Check if ChartNumber is the Id we're gonna use for Prod
+             $resultPT = findInDatabase("patient", $patient_id, "patient_id");
                  if($resultPT->num_rows == 0) {
 
-                     $fN= $data->patientData->firstName;
-                     $lN= $data->patientData->lastName;
-                     $pH= $data->patientData->phones[0]->number;
-                     $gD= $data->patientData->gender;
-                     $dob= $data->patientData->dateOfBirth;
-                     $id = $data->patientData->chartNumber;
-                     $pI= $data->patientData->id;
+                     $patient = getPatientById($data->patient->id);
+                     $data->patientData = json_decode($patient)->data;
+                     $chartNumber = $data->patientData->chartNumber;
 
-                     $sql = "INSERT INTO patient(id_paciente, first_name, last_name, home_phone, sex, birth_date, patient_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
-                     $conn = $conexion->prepare($sql);
-                     $conn->bind_param("sssssss", $id, $fN, $lN, $pH, $gD, $dob, $pI);
-                     $result = $conn->execute();
-
-                     if ($result) {
-                         $patient = findInDatabase("patient", $id, "id_paciente");
-                         $obj = $patient->fetch_assoc();
-                         $idPatient = $obj['id'];
-
-                        $start_time = $data->start;
-                        $end_time = $data->end;
-                        $location_id = $locationId;
-                        $patient_id = $obj['patient_id'];
-                        $apiId = $data->id;
-
-                         $sql = "INSERT INTO appointment(start_time, end_time, patient_id, location_id, api_appointment_id) VALUES (?, ?, ?, ?,?)";
-                         $conn = $conexion->prepare($sql);
-                         $conn->bind_param("sssss",  $start_time, $end_time, $idPatient, $location_id, $apiId );
-                         $conn->execute();
-
-                     }
-
-                 }else {
-                     $id = $data->patientData->chartNumber;
-                     $patient = findInDatabase("patient", $id, "id_paciente");
-                     $obj = $patient->fetch_assoc();
-                     $idPatient = $obj['id'];
-
-                     $start_time = $data->start;
-                     $end_time = $data->end;
-                     $location_id = $locationId;
-                     $patient_id = $idPatient;
-                     $apiId = $data->id;
+                     //Operatory Data Retrieve From Operatory Data on Api Response
 
 
-
-                     $sql = "INSERT INTO appointment(start_time, end_time, patient_id, location_id, api_appointment_id) VALUES (?, ?, ?, ?,?)";
-                     $conn = $conexion->prepare($sql);
-                     $conn->bind_param("sssss",  $start_time, $end_time, $patient_id, $location_id, $apiId );
-                     $resultappt = $conn->execute();
-
+                     echo"Usuario no esta enDatabase";
+                    //id_paciente corresponde a id conformado por ubicacion y numero ex.: MS2837, FX8734, etc
+                    //patient_id corresponde al id tomado de la api
+                    $PatientData = [
+                        "id_paciente" => $data->patientData->chartNumber,
+                        "patient_id" => $patient_id,
+                        "first_name" => $data->patientData->firstName,
+                        "last_name" => $data->patientData->lastName ?? "",
+                        "home_phone" => $data->patientData->phones[0]->number ?? "",
+                        "sex" => $data->patientData->gender ?? "",
+                        "birth_date" => $data->patientData->dateOfBirth ?? "",
+                    ];
+                     $result = insertInDatabase('patient', $PatientData);
 
                  }
 
-            }
+                //$patient = findInDatabase("patient", $patient_id, "patient_id");
+                //$obj = $patient->fetch_assoc();
+                //$idPatient = $obj['patient_id'];
 
+                $appointmentData = [
+                    "start_time" => $data->start,
+                    "end_time" => $data->end,
+                    "patient_id" => $patient_id,
+                    "location_id" => $locationId,
+                    "appointment_type_id" => "1",
+                    "api_appointment_id" => $data->id,
+                    "description" => $data->note ?? ""
+                ];
+                $result = insertInDatabase("appointment", $appointmentData);
+
+                if ($result) {
+                    $resSync['synced'] = true;
+                }
+            }
         }
+        print_r(json_encode($resSync));
 
     }
 
-
+    //FINALIZAN TODAS LAS FUNCIONES. SIGUEN LAS ACCIONES Y REDIRECCIONES
 
     $resultAuthorization = getToken($client_id, $client_secret);
     $token = $resultAuthorization->access_token;
 
 
-    if (isset($inputs['action']) && $inputs['action'] == 'getAppointments') {
-
+    if (isset($post['action']) && $post['action'] == 'getAppointments') {
 
         global $token;
-        global $clinica;
 
+        $clinica = $post['clinica'];
         $startDate = gmdate("Y-m-01\TH:i:s\Z");
         $result = getAppointments($locations, $startDate, $clinica);
         $result = json_decode($result);
+
         $appoinment = $result->data;
-        foreach ($appoinment as $data) {
-            $data->editable = true;
-            $patient = getPatientById($data->patient->id);
-            $data->patientData = json_decode($patient)->data;
-
-            $operatory = getDataByParam($data->operatory->url);
-            $data->operatoryData = json_decode($operatory)->data;
-            $data->resourceId = $data->operatoryData->shortName;
-
-            $clinica = getDataByParam($data->location->url);
-            $data->locationData = json_decode($clinica)->data;
-            $data->operatoryData->location = $data->locationData->name;
-        }
-
-
         $result = syncApiAppointment($appoinment);
-
-
 
        // echo json_encode($appoinment);
 
@@ -378,6 +397,50 @@
     $post->status = $currentAppoinment->data->status;
 
     $result = updateAppointment($post, $appointmentId);
+    }
+
+    if (isset($post['action']) && $post['action'] == 'createAppointment') {
+
+
+        global $token;
+
+
+        $clinica = $post['clinica'];
+        $startDate = gmdate("Y-m-d\TH:i:s\Z");
+        $result = getAppointments($locations, $startDate, $clinica);
+        $result = json_decode($result);
+
+        $appoinment = $result->data;
+
+
+
+        $result = syncApiAppointment($appoinment);
+
+
+
+        // echo json_encode($appoinment);
+
+
+    }
+
+    if (isset($post['action']) && $post['action'] == 'deleteAppointment') {
+
+        global $token;
+
+        $clinica = $post['clinica'];
+        $startDate = gmdate("Y-m-01\TH:i:s\Z");
+        $result = getAppointments($locations, $startDate, $clinica);
+        $result = json_decode($result);
+
+        $appoinment = $result->data;
+
+
+
+        $result = syncApiAppointment($appoinment);
+
+
+
+        // echo json_encode($appoinment);
 
 
     }

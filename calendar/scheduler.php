@@ -3,8 +3,6 @@ require("../include/database.php");
 include("../include/funciones.php");
 
 
-
-#Sync with Eagle
 if(isset($_POST['idClinica'])){
     /* $arreglo=getSchedulerClients($_POST['fecha'],$_POST['idClinica']);
     echo json_encode($arreglo); */
@@ -15,16 +13,8 @@ if(isset($_POST['idClinica'])){
     else if($clinica == 2){ $condicion_clinica = '1,2,3,5,16';}
     else if($clinica == 3){ $condicion_clinica = '11,12,13,14';}
 
-    $sql ='SELECT start_time,end_time,appointment_notes,appointment_id,patient.patient_id,location_id,confirmation_status,appointment_type_id,patient.first_name as pat_name,patient.last_name as pat_lastname ,
-        appt_types.type_color_hex AS color FROM appointment INNER JOIN patient ON patient.patient_id = appointment.patient_id LEFT JOIN appt_types ON appt_types.type_id = appointment.appointment_type_id  WHERE DATE(start_time) = "'.$date_post.'" AND location_id IN ('.$condicion_clinica.')';
-
-
-
-    $result = $conexion->query($sql);
-
-
-    print_r($result);
-    die();
+    $result = $conexion->query('SELECT start_time,end_time,appointment_notes,appointment_id,patient.patient_id,location_id,confirmation_status,appointment_type_id,patient.first_name as pat_name,patient.last_name as pat_lastname ,
+        appt_types.type_color_hex AS color FROM appointment INNER JOIN patient ON patient.patient_id = appointment.patient_id LEFT JOIN appt_types ON appt_types.type_id = appointment.appointment_type_id  WHERE DATE(start_time) = "'.$date_post.'" AND location_id IN ('.$condicion_clinica.');');
 
     while ($reg=$result->fetch_assoc())
     {

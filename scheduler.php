@@ -1,8 +1,9 @@
-<?php 
+<?php
+
     include 'include/funciones.php';
 
-
     $clinica = isset($_POST['clinica']) ?? "";
+
 ?>
 
 <!doctype html>
@@ -17,13 +18,53 @@
     <link href="assets/bootstrap-datepicker/css/bootstrap-datepicker3.css" rel="stylesheet" />
 
     <style>
-        .modal-backdrop.fade.in {
+       /* .modal-backdrop.fade.in {
             z-index: -1;
-        }
+        }*/
     </style>
 </head>
 
 <body>
+    <div class="container">
+        <div class="modal fade" id="modalAppointment" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title">Modal Header</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Some text in the modal.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="modal fade" id="modalNewAppointment" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title">Modal Header</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Some text in the modal.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 
     <div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header">
         <?php 
@@ -67,30 +108,55 @@
                         <div >
                             <form action="scheduler.php" method="post">
                                 <input type="hidden" name="clinica" value="Fairfax">
-                                <button type="submit" class="btn btn-primary <?php $clinica = 'fairfax'? 'active' : ''; ?>" value="Fairfax">Fairfax</button>
+                                <button type="submit" class="btn <?php echo (isset($_POST['clinica']))? ($_POST['clinica']  == 'Fairfax')? 'btn-success' : 'btn-primary' : 'btn-primary';?>" value="Fairfax">Fairfax</button>
                             </form>
                         </div>
 
                         <div >
                             <form action="scheduler.php" method="post">
                                 <input type="hidden" name="clinica" value="Manassas">
-                                <button type="submit" class="btn btn-primary <?php $clinica = 'manassas'? 'active' : ''; ?>" value="Manassas">Manassas</button>
+                                <button type="submit" class="btn  <?php echo (isset($_POST['clinica']))? ($_POST['clinica']  == 'Manassas')? 'btn-success' : 'btn-primary' : 'btn-primary';?>" value="Manassas">Manassas</button>
                             </form>
                         </div>
                         <div >
                             <form action="scheduler.php" method="post">
                                 <input type="hidden" name="clinica" value="Woodbridge">
-                                <button type="submit" class="btn btn-primary <?php $clinica = 'woodbridge'? 'active' : ''; ?>" value="Woodbridge">Woodbridge</button>
+                                <button type="submit" class="btn  <?php echo (isset($_POST['clinica']))? ($_POST['clinica']  == 'Woodbridge')? 'btn-success' : 'btn-primary' : 'btn-primary';?>" value="Woodbridge">Woodbridge</button>
                             </form>
                         </div>
+                    </div>
+
+                    <div class="alert alert-success" role="alert"  id="notSyncedAppointments" style="display: none">
+                        Appointments are up to date
+                    </div>
+                    <div class="alert alert-danger" role="alert" id="syncedAppointments" >
+                        New Appointments have been updated, please <a href="#" id="Reload" class="btn btn-primary" onClick="window.location.reload();">Reload</a>
                     </div>
 
 
                     <?php
 
-                    if (!empty($clinica)) {
+                    if (!empty($_POST['clinica'])) {
 
                     ?>
+                    <div class="container sm-col-12"  id="newAppointmentForm">
+                        <form>
+                            <div class="mb-3">
+                                <label for="paciente" class="form-label">Paciente</label>
+                                <input type="paciente" class="form-control" id="paciante" aria-describedby="´pacienteHelp">
+                                <div id="pacienteHelp" class="form-text">Ingresa nombre o numero de paciente.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="exampleInputPassword1" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="exampleInputPassword1">
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="exampleCheck1">
+                                <label class="form-check-label" for="exampleCheck1">Check me out</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </form>
+                    </div>
                     <div class="tab-content">
                         <div class="tab-pane tabs-animation fade show active" id="<?php echo $_POST['clinica']?? "";?>" role="tabpanel">
                             <div class="main-card mb-3 card">
@@ -108,6 +174,8 @@
             </div>
         </div>
     </div>
+
+
 
 
     <script type="text/javascript" src="./assets/scripts/main.js"></script>
@@ -176,8 +244,11 @@
 </html>
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
+        $('#notSyncedAppointments').hide()
+        $('#SyncedAppointments').hide()
         $(document).ready(function () {
             var clinica = $("[id^=calendar]").attr("clinica");
+            console.log(clinica);
 
             genCalendar("calendar-" + clinica);
             syncData(clinica);
@@ -211,17 +282,26 @@
         function syncData(clinica){
             var arreglo;
             $.ajax({
-                async: false,
+                async: true,
                 type: "POST",
                 dataType: 'JSON',
                 url: "calendar/apiData.php",
                 data: "action=getAppointments&clinica=" + clinica,
                 })
                 .done(function (data) {
-                    arreglo = data;
+                    data = JSON.parse(JSON.stringify(data));
+                    if (data.synced == true) {
+                        $("#syncedAppointments").show('slow')
+                    }
+                    if (data.synced == false) {
+                        $("#notSyncedAppointments").show('slow')
+                        setTimeout(function(){ $("#notSyncedAppointments").hide("slow"); }, 5000);
+
+                    }
+                    console.log(data.synced);
+
                 })
                 .fail(function (data) {
-                    console.log(data)
                     return {};
                 });
             return arreglo
@@ -229,7 +309,6 @@
 
 
         function updateAppointment(info) {
-
             dataPut = {
                 "id": info.event.id,
                 "start": info.event.startStr,
@@ -245,6 +324,30 @@
             }).done(function (data) {
                     arreglo = data;
                 })
+                .fail(function (data) {
+                    return {};
+                });
+
+
+        }
+
+        function createAppointment(info) {
+
+            dataPut = {
+                "id": info.event.id,
+                "start": info.event.startStr,
+                "end": info.event.endStr,
+                "action": "createAppointment",
+            }
+
+            $.ajax({
+                async: false,
+                type: "POST",
+                url: "calendar/apiData.php",
+                data: JSON.stringify(dataPut)
+            }).done(function (data) {
+                arreglo = data;
+            })
                 .fail(function (data) {
                     return {};
                 });
@@ -346,7 +449,6 @@
             var citas;
 
             var calendar = new FullCalendar.Calendar(calendarEl, {
-
                 themeSystem: 'bootstrap',
                 customButtons: {
                     next: {
@@ -400,9 +502,6 @@
                         }
                     }
                 },
-                eventRightclick: function () {
-                    alert("hola")
-                },
                 schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                 headerToolbar: {
                     left: 'prev,next today',
@@ -414,11 +513,11 @@
                 selectable: true,
                 selectMirror: true,
                 slotEventOverlap: false,
-                /*allDaySlot: false,
+                allDaySlot: false,
                 minTime: '07:00:00',
                 maxTime: '18:00:00',
                 slotDuration: '00:30:00',
-                slotLabelInterval : '00:30:00', */
+                slotLabelInterval : '00:30:00',
 
                 /* select: function (arg) {
 
@@ -465,20 +564,26 @@
                     });
                 },
                 events: arrayEvent,
-                /*eventResize : function(data){
+               /* eventResize : function(data){
                     updateAppointment(data)
                 },
                 eventDrop : function(data){
                    updateAppointment(data)
-                },
+                },*/
                 eventChange: function(data){
                     console.log(data)
-                },
-                eventClick(data){
-                    console.log(data);
-                }*/
-                
 
+
+                },
+                eventClick: function(eventClickInfo ){
+                   //$('#modalAppointment').modal();
+                    console.log(eventClickInfo );
+                },
+                dateClick: function (data){
+                    console.log(data)
+                    $("#newAppointmentForm").show('slow').focus();
+
+                }
             });
             calendar.render();
         }
