@@ -502,6 +502,7 @@
                         }
                     }
                 },
+
                 schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                 headerToolbar: {
                     left: 'prev,next today',

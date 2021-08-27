@@ -1,4 +1,5 @@
 <?php
+
 include 'include/funciones.php';
 ?>
 <!doctype html>

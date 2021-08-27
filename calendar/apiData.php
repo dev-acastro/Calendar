@@ -36,12 +36,13 @@
 
     }
 
-    function getAppointments($locations, $startDate, $clinica)
+    function getAppointments($locations, $startDate, $endDate, $clinica, $lastSync)
     {
         global $OrganizationID;
         global $token;
 
-        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/appointments?filter=location.id=='.$locations[$clinica] . ',start>=' . $startDate);
+
+        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/appointments?filter=location.id=='.$locations[$clinica] . ',start>=' . $startDate . ",start<".$endDate.",lastModified>=" .$lastSync);
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -198,6 +199,18 @@
         return $result;
     }
 
+    function findInDatabaseMax($table, $id, $column) {
+        global $conexion;
+
+        $sql = "SELECT max(date_created) from $table WHERE $column = ?";
+        $conn = $conexion->prepare($sql);
+        $conn->bind_param("s", $id);
+        $conn->execute();
+        $result = $conn->get_result();
+
+        return $result;
+    }
+
     function insertInDatabase($table, $data) {
         global $conexion;
 
@@ -229,6 +242,23 @@
         } else {
            return false;
         }
+    }
+
+    function updateInDatabase($table, $data, $id) {
+        $values ="";
+        global $conexion;
+
+        foreach ($data as $key => $value) {
+            $values = empty($values)? "," : "". $key ."=" . $value;
+        }
+
+        $sql = "UPDATE $table SET $values WHERE id = $id ";
+        $result = $conexion->query($sql);
+        if ($result) {
+            return true;
+        }
+
+
     }
 
     function retrieveLocationId($location) {
@@ -280,9 +310,6 @@
 
     function syncApiAppointment($dataApi) {
 
-        print_r($dataApi);
-        die();
-
         $resSync =[];
         $resSync['synced'] = false;
 
@@ -295,8 +322,6 @@
                 $operatory = getDataByParam($data->operatory->url);
                 $data->operatoryData = json_decode($operatory)->data;
                 //$data->resourceId = $data->operatoryData->shortName;
-
-
 
                 $clinica = getDataByParam($data->location->url);
                 $data->locationData = json_decode($clinica)->data;
@@ -353,10 +378,26 @@
                 if ($result) {
                     $resSync['synced'] = true;
                 }
+            } else {
+                $id = $data->id;
+
+                $appointmentData = [
+                    "start_time" => $data->start,
+                    "end_time" => $data->end,
+                    "patient_id" => $patient_id,
+                    "location_id" => $locationId,
+                    "appointment_type_id" => "1",
+                    "api_appointment_id" => $data->id,
+                    "description" => $data->note ?? ""
+                ];
+                updateInDatabase("appointments", $appointmentData, $id);
+
+                if ($result) {
+                    $resSync['synced'] = true;
+                }
             }
         }
         print_r(json_encode($resSync));
-
     }
 
     //FINALIZAN TODAS LAS FUNCIONES. SIGUEN LAS ACCIONES Y REDIRECCIONES
@@ -370,11 +411,27 @@
         global $token;
 
         $clinica = $post['clinica'];
-        $startDate = gmdate("Y-m-01\TH:i:s\Z");
-        $result = getAppointments($locations, $startDate, $clinica);
+
+        if (!empty($post['dateArrow'])) {
+            $startDate = $post['dateArrow'];
+        } else {
+            $startDate = gmdate("Y-m-01 H:i:s");
+        }
+
+        $endDate = gmdate("Y-m-01 H:i:s", strtotime($startDate."+ 1 day"));
+
+        $data = [
+            'location' => strtolower($clinica),
+        ];
+
+        $lastSync = findInDatabaseMax('sync_times', strtolower($clinica), "created" );
+        insertInDatabase("sync_times", $data);
+        $result = getAppointments($locations, $startDate, $endDate,  $clinica, $lastSync);
+
         $result = json_decode($result);
 
         $appoinment = $result->data;
+
         $result = syncApiAppointment($appoinment);
 
        // echo json_encode($appoinment);
@@ -407,14 +464,14 @@
 
         $clinica = $post['clinica'];
         $startDate = gmdate("Y-m-d\TH:i:s\Z");
-        $result = getAppointments($locations, $startDate, $clinica);
+        $result = getAppointments($locations, $startDate, $clinica, true);
         $result = json_decode($result);
 
         $appoinment = $result->data;
 
 
 
-        $result = syncApiAppointment($appoinment);
+        syncApiAppointment($appoinment);
 
 
 
