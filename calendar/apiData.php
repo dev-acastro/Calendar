@@ -1,5 +1,5 @@
 <?php
-    
+
 
     require '../include/database.php';
 
@@ -415,15 +415,15 @@
         if (!empty($post['dateArrow'])) {
             $startDate = $post['dateArrow'];
         } else {
-            $startDate = gmdate("Y-m-01 H:i:s");
+            $startDate = gmdate("Y-m-d H:i:s");
         }
 
-        $endDate = gmdate("Y-m-01 H:i:s", strtotime($startDate."+ 1 day"));
+        $endDate = gmdate("Y-m-d H:i:s", strtotime($startDate."+ 1 day"));
 
         $data = [
             'location' => strtolower($clinica),
         ];
-
+        xdebug_break();
         $lastSync = findInDatabaseMax('sync_times', strtolower($clinica), "created" );
         insertInDatabase("sync_times", $data);
         $result = getAppointments($locations, $startDate, $endDate,  $clinica, $lastSync);
@@ -439,7 +439,7 @@
 
     }
 
-    if (isset($post->action) && $post->action== 'updateAppointment') {
+    if (isset($post['action']) && $post['action']== 'updateAppointment') {
     global $token;
     global $clinica;
 
@@ -452,6 +452,9 @@
     $post->operatory = $currentAppoinment->data->operatory;
     $post->patient = $currentAppoinment->data->patient;
     $post->status = $currentAppoinment->data->status;
+
+    print_r($post);
+    die();
 
     $result = updateAppointment($post, $appointmentId);
     }

@@ -1,5 +1,65 @@
 <?php 
     include 'include/funciones.php';
+
+    if (!empty($_GET)) {
+        $inputs = $_GET;
+
+
+        if (!empty($inputs['seat'])) {
+
+            switch ($inputs['seat']) {
+                case "FFX1":
+                    $seat = "1";
+                    $clinic = 'Fairfax';
+                    break;
+                case "FFX2":
+                    $seat = "1";
+                    $clinic = 'Fairfax';
+                    break;
+                case "FFX3":
+                    $seat = "1";
+                    $clinic = 'Fairfax';
+                    break;
+                case "FFX4":
+                    $seat = "1";
+                    $clinic = 'Fairfax';
+                    break;
+                case "OP-1":
+                    $seat = "2";
+                    $clinic = 'Manasass';
+                    break;
+                case "OP-2":
+                    $seat = "2";
+                    $clinic = 'Manasass';
+                    break;
+                case "OP-3":
+                    $seat = "2";
+                    $clinic = 'Manasass';
+                    break;
+                case "OP-4":
+                    $seat = "2";
+                    $clinic = 'Manasass';
+                    break;
+                case "WG1":
+                    $seat = "3";
+                    $clinic = 'Woodbridge';
+                    break;
+                case "WG2":
+                    $seat = "3";
+                    $clinic = 'Woodbridge';
+                    break;
+                case "WG3":
+                    $seat = "3";
+                    $clinic = 'Woodbridge';
+                    break;
+                case "WG4":
+                    $seat = "3";
+                    $clinic = 'Woodbridge';
+                    break;
+            }
+        }
+
+}
 ?>
 
 <!doctype html>
@@ -216,6 +276,16 @@
                                                         class="col-sm-4 col-form-label"><b>Clinic <span
                                                                 class="text-danger">*</span></b></label>
                                                     <div class="col-sm-8">
+
+                                                    <?php if (!empty($seat) && !empty($clinic)){?>
+
+                                                        <select class="form-control" id="select_clinic" name="select_clinic" disabled>
+
+                                                            <option value="<?php echo $seat;?>" selected><?php echo $clinic;?></option>
+                                                        </select>
+
+                                                        <?php  } elseif (empty($seat) && empty($clinic)) {   ?>
+
                                                         <select class="form-control" id="select_clinic"
                                                             name="select_clinic">
                                                             <option selected disabled>--- Select a Clinic ---</option>
@@ -237,6 +307,7 @@
                                                             
                                                             <?php endwhile; ?>
                                                         </select>
+                                                        <?php }?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -391,7 +462,7 @@
                                                                     class="text-danger">*</span></b></label>
                                                         <div class="col-sm-9">
                                                             <!-- <input class="form-control" id="app_date" placeholder="Select a clinic to define a Date" value="<?php echo $_POST['finicio']?>"> -->
-                                                            <input class="form-control" id="app_date" autocomplete="off" placeholder="Select a clinic to define a Date">
+                                                            <input class="form-control" id="app_date" autocomplete="off" placeholder="Select a clinic to define a Date" value="<?php echo $inputs['start']?? '' ?>" <?php echo isset($inputs['start'])? 'disabled' : '' ?>>
                                                         </div>
                                                     </div>
                                                     <div class="position-relative row form-group"><label for="app_reason"
@@ -416,7 +487,12 @@
                                                                     class="text-danger">*</span></b></label>
                                                         <div class="col-sm-9">
                                                             <!-- <input class="form-control" id="app_time" placeholder="Select a Time"> -->
-                                                            <select class="form-control" id="app_time"></select>
+                                                            <select class="form-control" id="app_time" <?php echo isset($inputs['time'])? 'disabled': '' ?>>
+                                                                <?php if (!empty($inputs['time'])) { ?>
+                                                                    <option value="<?php echo $inputs['time'] ?>" selected><?php echo $inputs['time'] ?></option>
+
+                                                                <?php } ?>
+                                                            </select>
                                                         </div>
                                                     </div>
                                                     <div class="position-relative row form-group"><label for=""
@@ -629,6 +705,7 @@
 
     <script>
         $(document).ready(function () {
+
             $('#example').DataTable();
             $(":input[data-inputmask-mask]").inputmask();
             $(":input[data-inputmask-alias]").inputmask();
@@ -641,6 +718,9 @@
                     console.log(response);
                 }
             });
+
+            seatValue = $('#select_clinic').val()
+            if (seatValue!=null) {$('#select_clinic').trigger('change')}
         });
     </script>
 </body>

@@ -129,7 +129,7 @@
                     <div class="alert alert-success" role="alert"  id="notSyncedAppointments" style="display: none">
                         Appointments are up to date
                     </div>
-                    <div class="alert alert-danger" role="alert" id="syncedAppointments" >
+                    <div class="alert alert-danger" role="alert" id="syncedAppointments" style="display: none">
                         New Appointments have been updated, please <a href="#" id="Reload" class="btn btn-primary" onClick="window.location.reload();">Reload</a>
                     </div>
 
@@ -139,7 +139,7 @@
                     if (!empty($_POST['clinica'])) {
 
                     ?>
-                    <div class="container sm-col-12"  id="newAppointmentForm">
+                    <div class="container sm-col-12"  id="newAppointmentForm" hidden>
                         <form>
                             <div class="mb-3">
                                 <label for="paciente" class="form-label">Paciente</label>
@@ -248,11 +248,8 @@
         $('#SyncedAppointments').hide()
         $(document).ready(function () {
             var clinica = $("[id^=calendar]").attr("clinica");
-            console.log(clinica);
-
             genCalendar("calendar-" + clinica);
             syncData(clinica);
-
         });
 
 
@@ -296,10 +293,8 @@
                     if (data.synced == false) {
                         $("#notSyncedAppointments").show('slow')
                         setTimeout(function(){ $("#notSyncedAppointments").hide("slow"); }, 5000);
-
                     }
                     console.log(data.synced);
-
                 })
                 .fail(function (data) {
                     return {};
@@ -316,6 +311,7 @@
                 "action": "updateAppointment",
             }
 
+            console.log(dataPut);
             $.ajax({
                 async: false,
                 type: "POST",
@@ -518,7 +514,16 @@
                 minTime: '07:00:00',
                 maxTime: '18:00:00',
                 slotDuration: '00:30:00',
-                slotLabelInterval : '00:30:00',
+                select: function (info) {
+
+                    seat = info.resource.id
+                    start = info.start.toISOString().substring(0, 10)
+                    time = info.start.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })
+
+                    window.location.replace('addCallTrackerEntry.php?start='+start+'&time='+time+'&seat='+seat)
+
+                },
+                //slotLabelInterval : '00:30:00',
 
                 /* select: function (arg) {
 
@@ -572,19 +577,13 @@
                    updateAppointment(data)
                 },*/
                 eventChange: function(data){
-                    console.log(data)
-
-
+                    updateAppointment(data)
                 },
                 eventClick: function(eventClickInfo ){
                    //$('#modalAppointment').modal();
                     console.log(eventClickInfo );
                 },
-                dateClick: function (data){
-                    console.log(data)
-                    $("#newAppointmentForm").show('slow').focus();
 
-                }
             });
             calendar.render();
         }

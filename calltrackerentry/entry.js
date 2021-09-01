@@ -507,9 +507,9 @@ $(document).ready(function () {
     //CREAR ID DE PACIENTE
     $("#select_clinic").change(function () {
         var availableDates = [];
-        $('#app_date').datepicker('destroy');
-        $('#app_time').empty();
-        /* $('#app_time').timepicker('destroy'); */
+            $('#app_date').datepicker('destroy');
+            $('#app_time').empty();
+            /* $('#app_time').timepicker('destroy'); */
 
         var clinicName = $('#select_clinic option:selected').html();
         var clinicId = $('#select_clinic').val();
@@ -522,7 +522,7 @@ $(document).ready(function () {
                 url: 'calltrackerentry/loadPatientId.php',
                 data: 'id_clinica=' + clinicId,
                 success: function (resp) {
-                    console.log(resp);
+                   console.log(resp);
                     var letraI = clinicName.charAt(0);
                     var letraF = clinicName.charAt(clinicName.length - 1);
                     var id_paciente = letraI.toUpperCase() + letraF.toUpperCase();
@@ -1238,4 +1238,5 @@ $(document).ready(function () {
 
 
     });
+
 });
