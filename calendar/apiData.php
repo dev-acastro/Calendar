@@ -7,6 +7,9 @@
         $post = $_POST;
     }
 
+
+
+
    //Constantes a Cambiar 
     $token = [];
     $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
@@ -36,13 +39,39 @@
 
     }
 
+    function dateToClinic( string $date) : string
+    {
+        $notFormattedDateFromApi = new DateTime($date);
+        $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
+
+        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('zulu'));
+        $dateFormatted->setTimezone('America/New_York');
+
+        return $dateFormatted->format('Y-m-d H:i:s');
+
+    }
+
+    function dateToApi( string $date) : string
+    {
+        $notFormattedDateFromApi = new DateTime($date);
+        $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
+
+        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('America/New_York'));
+        $dateFormatted->setTimezone('Zulu');
+
+        return $dateFormatted->format('Y-m-d\T H:i:s.v\Z');
+
+    }
+
     function getAppointments($locations, $startDate, $endDate, $clinica, $lastSync)
     {
         global $OrganizationID;
         global $token;
 
 
-        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/appointments?filter=location.id=='.$locations[$clinica] . ',start>=' . $startDate . ",start<".$endDate.",lastModified>=" .$lastSync);
+        $url = 'https://prod.hs1api.com/ascend-gateway/api/v1/appointments?filter=location.id=='.$locations[$clinica] . ',start>=' . $startDate . ",start<".$endDate;
+
+        $curl = curl_init($url);
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -64,6 +93,27 @@
         global $token;
 
         $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/patients/'. $id);
+
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+            'Authorization: Bearer '. $token,
+            'Organization-ID: '. $OrganizationID,
+        ));
+
+        $output = curl_exec($curl);
+
+        curl_close($curl);
+
+        return $output;
+
+    }
+
+    function getPatientByChartNumber($chartNumber)
+    {
+        global $OrganizationID;
+        global $token;
+
+        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/patients?filter=chartNumber =='.$chartNumber);
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -117,6 +167,11 @@
         return $output;
     }
 
+    function p($d) {
+        print_r($d);
+        die();
+    }
+
     function updateAppointment($data, $id){
         global $OrganizationID;
         global $token;
@@ -138,7 +193,7 @@
 
         curl_close($curl);
 
-
+        p($output);
         return $output;
     }
 
@@ -199,16 +254,13 @@
         return $result;
     }
 
-    function findInDatabaseMax($table, $id, $column) {
+    function findInDatabaseMax($location) {
         global $conexion;
 
-        $sql = "SELECT max(date_created) from $table WHERE $column = ?";
-        $conn = $conexion->prepare($sql);
-        $conn->bind_param("s", $id);
-        $conn->execute();
-        $result = $conn->get_result();
-
-        return $result;
+        $sql = "SELECT max(created) from sync_times WHERE location = '" .$location . "'" ;
+        $result = $conexion->query($sql);
+        $row = $result -> fetch_array(MYSQLI_NUM);
+        return $row[0];
     }
 
     function insertInDatabase($table, $data) {
@@ -315,36 +367,34 @@
 
         foreach ($dataApi as $data) {
 
-            $resultDB =findInDatabase("appointment", $data->id, "api_appointment_id");
+            $resultDB =findInDatabase("appointment", $data->id, "appointment_id");
+
+            $operatory = getDataByParam($data->operatory->url);
+            $data->operatoryData = json_decode($operatory)->data;
+            //$data->resourceId = $data->operatoryData->shortName;
+
+            $clinica = getDataByParam($data->location->url);
+            $data->locationData = json_decode($clinica)->data;
+            $data->operatoryData->location = $data->locationData->name;
+
+            $location = $data->operatoryData->name;
+            $locationId = retrieveLocationId($location);
+            $patient_id = $data->patient->id;
+            $appointment_id = $data->id;
+
 
             if($resultDB->num_rows == 0) {
+                //Cita no esta en Sistema
 
-                $operatory = getDataByParam($data->operatory->url);
-                $data->operatoryData = json_decode($operatory)->data;
-                //$data->resourceId = $data->operatoryData->shortName;
-
-                $clinica = getDataByParam($data->location->url);
-                $data->locationData = json_decode($clinica)->data;
-                $data->operatoryData->location = $data->locationData->name;
-
-                $location = $data->operatoryData->name;
-                $locationId = retrieveLocationId($location);
-                $patient_id = $data->patient->id;
-
-                echo"Cita no esta enDatabase";
                 //* ALERT -- ALERT   *//
                 //Check if ChartNumber is the Id we're gonna use for Prod
              $resultPT = findInDatabase("patient", $patient_id, "patient_id");
                  if($resultPT->num_rows == 0) {
+                     //Paciente no esta en sistema
 
                      $patient = getPatientById($data->patient->id);
                      $data->patientData = json_decode($patient)->data;
-                     $chartNumber = $data->patientData->chartNumber;
 
-                     //Operatory Data Retrieve From Operatory Data on Api Response
-
-
-                     echo"Usuario no esta enDatabase";
                     //id_paciente corresponde a id conformado por ubicacion y numero ex.: MS2837, FX8734, etc
                     //patient_id corresponde al id tomado de la api
                     $PatientData = [
@@ -360,18 +410,17 @@
 
                  }
 
-                //$patient = findInDatabase("patient", $patient_id, "patient_id");
-                //$obj = $patient->fetch_assoc();
-                //$idPatient = $obj['patient_id'];
-
                 $appointmentData = [
-                    "start_time" => $data->start,
-                    "end_time" => $data->end,
+                    "id_paciente" => $data->patientData->chartNumber,
+                    "start_time" => dateToClinic($data->start),
+                    "end_time" => dateToClinic($data->end),
                     "patient_id" => $patient_id,
+
                     "location_id" => $locationId,
                     "appointment_type_id" => "1",
-                    "api_appointment_id" => $data->id,
-                    "description" => $data->note ?? ""
+                    "appointment_id" => $data->id,
+                    "appointment_notes" => $data->note ?? "",
+                    "description" => $data->patientData->firstName . " " . $data->patientData->lastName
                 ];
                 $result = insertInDatabase("appointment", $appointmentData);
 
@@ -379,18 +428,16 @@
                     $resSync['synced'] = true;
                 }
             } else {
-                $id = $data->id;
 
                 $appointmentData = [
-                    "start_time" => $data->start,
-                    "end_time" => $data->end,
-                    "patient_id" => $patient_id,
+                    "start_time" => dateToClinic($data->start),
+                    "end_time" => dateToClinic($data->end),
                     "location_id" => $locationId,
                     "appointment_type_id" => "1",
-                    "api_appointment_id" => $data->id,
-                    "description" => $data->note ?? ""
+                    "appointment_id" => $data->id,
+                    "appointment_notes" => $data->note ?? "",
                 ];
-                updateInDatabase("appointments", $appointmentData, $id);
+                $result =  updateInDatabase("appointments", $appointmentData, $id);
 
                 if ($result) {
                     $resSync['synced'] = true;
@@ -415,20 +462,21 @@
         if (!empty($post['dateArrow'])) {
             $startDate = $post['dateArrow'];
         } else {
-            $startDate = gmdate("Y-m-d H:i:s");
+            $startDate = date("Y-m-d");
         }
 
-        $endDate = gmdate("Y-m-d H:i:s", strtotime($startDate."+ 1 day"));
+        $endDate = date("Y-m-d", strtotime('+1 day', strtotime($startDate)));
 
         $data = [
             'location' => strtolower($clinica),
         ];
-        xdebug_break();
-        $lastSync = findInDatabaseMax('sync_times', strtolower($clinica), "created" );
+
+        $lastSync = findInDatabaseMax(strtolower($clinica));
         insertInDatabase("sync_times", $data);
         $result = getAppointments($locations, $startDate, $endDate,  $clinica, $lastSync);
 
         $result = json_decode($result);
+
 
         $appoinment = $result->data;
 
@@ -439,24 +487,31 @@
 
     }
 
-    if (isset($post['action']) && $post['action']== 'updateAppointment') {
+    if (isset($post['action']) && $post['action'] == 'updateAppointment') {
     global $token;
     global $clinica;
 
-    $appointmentId = $post->id;
+    $appointmentId = $post['id'];
+    $data = [];
+
 
     $currentAppoinment = getDataById("appointments", $appointmentId);
     $currentAppoinment = json_decode($currentAppoinment);
 
-    $post->provider = $currentAppoinment->data->provider;
-    $post->operatory = $currentAppoinment->data->operatory;
-    $post->patient = $currentAppoinment->data->patient;
-    $post->status = $currentAppoinment->data->status;
 
-    print_r($post);
-    die();
 
-    $result = updateAppointment($post, $appointmentId);
+    $data['start'] = date('Y-m-d\TH:i:s.000\Z' ,strtotime($post['start']));
+    $data['provider'] = $currentAppoinment->data->provider;
+    $data['operatory'] = $currentAppoinment->data->operatory;
+    $data['patient'] = $currentAppoinment->data->patient;
+    $data['status'] = $currentAppoinment->data->status;
+
+    $data['patient']->id = (int) $data['patient']->id;
+    $data['provider']->id = (int) $data['provider']->id;
+    $data['operatory']->id = (int) $data['operatory']->id;
+
+    $result = updateAppointment($data, $appointmentId);
+    print_r($result);
     }
 
     if (isset($post['action']) && $post['action'] == 'createAppointment') {
@@ -464,10 +519,34 @@
 
         global $token;
 
+        $patientData = [
+          'firstName' => 'Alez',
+          'lastName' =>'Camilot',
+          'contactMethod' => 'call Me',
+          'languageType' => 'Spanish',
+          "patientStatus" => "NEW",
+          "dateOfBirth" => "",
+          "preferredLocation" => [
+              "id" => 7000000000115,
+            "type" => "LocationV1",
+            "url" => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000000115"
+          ],
+          "address1" => "CA 9845",
+          "city" => "Sacramento",
+          "state" => "CA",
+          "postalCode" => "94203 ",
+            'chartNumber' => 'FX2345'
+        ];
 
-        $clinica = $post['clinica'];
-        $startDate = gmdate("Y-m-d\TH:i:s\Z");
-        $result = getAppointments($locations, $startDate, $clinica, true);
+        if (getPatientbyChartNumber($patientData['chartNumber'])) {
+            $result = createAppointment($data);
+        } else {
+            $resultNewPatient = createPatient($patientData);
+
+        }
+
+
+
         $result = json_decode($result);
 
         $appoinment = $result->data;

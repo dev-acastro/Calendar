@@ -68,7 +68,7 @@ if(isset($_POST['idClinica'])){
         else if($confirmation_status == 3){$icon = "phone"; $color_icon = "dark";}
 
         $json[]=array(
-             'id'   => $appointment_id,
+            'id'   => $appointment_id,
             'resourceId'   => $idRand,
             'title'   => quitar_tildes($pat_name)." ".quitar_tildes($pat_lastname),
             'start'   => $date_appt.'T'.$start_time,

@@ -268,7 +268,6 @@
                 })
                 .done(function (data) {
                     arreglo = data;
-                    //syncData();
                 })
                 .fail(function (data) {
                     return {};
@@ -310,13 +309,13 @@
                 "end": info.event.endStr,
                 "action": "updateAppointment",
             }
+            query = param(dataPut)
 
-            console.log(dataPut);
             $.ajax({
                 async: false,
                 type: "POST",
-                url: "calendar/apiData.php",
-                data: JSON.stringify(dataPut)
+                url: "calendar/apiData.php?",
+                data: query
             }).done(function (data) {
                     arreglo = data;
                 })
@@ -325,6 +324,18 @@
                 });
 
 
+        }
+
+        function param(object)
+        {
+            var parameters = [];
+            for (var property in object) {
+                if (object.hasOwnProperty(property)) {
+                    parameters.push(encodeURI(property + '=' + object[property]));
+                }
+            }
+
+            return parameters.join('&');
         }
 
         function createAppointment(info) {
@@ -511,8 +522,8 @@
                 selectMirror: true,
                 slotEventOverlap: false,
                 allDaySlot: false,
-                minTime: '07:00:00',
-                maxTime: '18:00:00',
+                slotMinTime: '07:00:00',
+                slotMaxTime: '18:00:00',
                 slotDuration: '00:30:00',
                 select: function (info) {
 
@@ -577,6 +588,7 @@
                    updateAppointment(data)
                 },*/
                 eventChange: function(data){
+
                     updateAppointment(data)
                 },
                 eventClick: function(eventClickInfo ){
