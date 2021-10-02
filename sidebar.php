@@ -40,6 +40,12 @@
                         Home
                     </a>
                 </li>
+                <li>
+                    <a href="files.php" class="">
+                        <i class="metismenu-icon pe-7s-home"></i>
+                        Files Management
+                    </a>
+                </li>
                 <li class="app-sidebar__heading">Appointments and Call Tracker</li>
                 <li>
                     <a href="under/NotYet.php">

@@ -6,11 +6,12 @@
     if(!empty($_POST)){
         $post = $_POST;
     }
+    if(!empty($_GET)){
+        $post = $_GET;
+    }
 
 
-
-
-   //Constantes a Cambiar 
+//Constantes a Cambiar
     $token = [];
     $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
     $client_secret = "IqHYGkvrsN7eFfRe";
@@ -63,13 +64,17 @@
 
     }
 
-    function getAppointments($locations, $startDate, $endDate, $clinica, $lastSync)
+    function getAppointments($locations, $startDate, $endDate, $clinica, $lastSync, $byLastModified = false)
     {
         global $OrganizationID;
         global $token;
 
 
         $url = 'https://prod.hs1api.com/ascend-gateway/api/v1/appointments?filter=location.id=='.$locations[$clinica] . ',start>=' . $startDate . ",start<".$endDate;
+
+        if ($byLastModified) {
+            $url.= ',lastModified>='.$lastSync;
+        }
 
         $curl = curl_init($url);
 
@@ -360,6 +365,115 @@
 
     }
 
+    function syncApiOperatory()
+    {
+        $url = "https://prod.hs1api.com/ascend-gateway/api/v1/operatories";
+        $operatories = json_decode(getDataByParam($url));
+
+        $rest = [];
+        $rest['status'] = 'Failed';
+
+        if ($operatories->statusCode == 200) {
+            foreach ($operatories->data as $data) {
+                //Buscar Operatory en DB
+                $result = findInDatabase('operatories', $data->id, 'operatory_id');
+
+                $opArray = [
+                    "operatory_id" => $data->id,
+                    'name' => $data->name,
+                    'shortName' => $data->shortName,
+                    'location_id' => $data->location->id,
+                ];
+
+                if ($result->num_rows == 0) {
+                    $result = insertInDatabase('operatories', $opArray);
+                    $rest['status'] = "Success";
+                    $rest[]= "New Operatory with id ".$data->id . " and name " . $data->name . " has been added";
+                } elseif ($result->num_rows != 0) {
+                    $result = updateInDatabase('operatories', $opArray, $data->id);
+                    $rest['status'] = "Success";
+                    $rest[]= "Operatory with id ".$data->id . " and name " . $data->name . " has been updated";
+                }
+
+            }
+
+        }
+        print_r($rest);
+
+    }
+
+    function syncApiLocation(){
+        $url = "https://prod.hs1api.com/ascend-gateway/api/v1/locations";
+        $locations = json_decode(getDataByParam($url));
+        $rest = [];
+        $rest['status'] = 'Failed';
+
+
+
+        if ($locations->statusCode == 200) {
+            foreach ($locations->data as $data) {
+                //Buscar Operatory en DB
+                $result = findInDatabase('locations', $data->id, 'location_id');
+
+                $loArray = [
+                    "location_id" => $data->id,
+                    'name' => $data->name,
+                ];
+
+                if ($result->num_rows == 0) {
+                    $result = insertInDatabase('locations', $loArray);
+                    $rest['status'] = "Success";
+                    $rest[]= "New Location with id ".$data->id . " and name " . $data->name . " has been added";
+                } elseif ($result->num_rows != 0) {
+                    $result = updateInDatabase('locations', $loArray, $data->id);
+                    $rest['status'] = "Success";
+                    $rest[]= "Location with id ".$data->id . " and name " . $data->name . " has been updated";
+                }
+
+            }
+
+        }
+
+        print_r($rest);
+    }
+
+    function syncApiColorCategories()
+    {
+        $url = "https://prod.hs1api.com/ascend-gateway/api/v1/operatories";
+        $operatories = json_decode(getDataByParam($url));
+
+        $rest = [];
+        $rest['status'] = 'Failed';
+
+        if ($operatories->statusCode == 200) {
+            foreach ($operatories->data as $data) {
+                //Buscar Operatory en DB
+                $result = findInDatabase('operatories', $data->id, 'operatory_id');
+
+                $opArray = [
+                    "operatory_id" => $data->id,
+                    'name' => $data->name,
+                    'shortName' => $data->shortName,
+                    'location_id' => $data->location->id,
+                ];
+
+                if ($result->num_rows == 0) {
+                    $result = insertInDatabase('operatories', $opArray);
+                    $rest['status'] = "Success";
+                    $rest[]= "New Operatory with id ".$data->id . " and name " . $data->name . " has been added";
+                } elseif ($result->num_rows != 0) {
+                    $result = updateInDatabase('operatories', $opArray, $data->id);
+                    $rest['status'] = "Success";
+                    $rest[]= "Operatory with id ".$data->id . " and name " . $data->name . " has been updated";
+                }
+
+            }
+
+        }
+        print_r($rest);
+
+    }
+
     function syncApiAppointment($dataApi) {
 
         $resSync =[];
@@ -399,6 +513,7 @@
                     //patient_id corresponde al id tomado de la api
                     $PatientData = [
                         "id_paciente" => $data->patientData->chartNumber,
+
                         "patient_id" => $patient_id,
                         "first_name" => $data->patientData->firstName,
                         "last_name" => $data->patientData->lastName ?? "",
@@ -471,9 +586,9 @@
             'location' => strtolower($clinica),
         ];
 
-        $lastSync = findInDatabaseMax(strtolower($clinica));
+        $lastSync = dateToApi(findInDatabaseMax(strtolower($clinica)));
         insertInDatabase("sync_times", $data);
-        $result = getAppointments($locations, $startDate, $endDate,  $clinica, $lastSync);
+        $result = getAppointments($locations, $startDate, $endDate,  $clinica, $lastSync, true);
 
         $result = json_decode($result);
 
@@ -582,6 +697,32 @@
         // echo json_encode($appoinment);
 
 
+    }
+
+    if (isset($post['action']) && $post['action'] == 'syncLocations') {
+        syncApiLocation();
+    }
+
+    if (isset($post['action']) && $post['action'] == 'syncOperatory') {
+        syncApiOperatory();
+    }
+
+    if (isset($post['action']) ) {
+
+        switch ($post['action']) {
+
+            case 'syncolorcategories';
+                syncApiColorCategories();
+            break;
+
+            case 'synclocations';
+                syncApiLocation();
+            break;
+
+            case 'syncoperatory';
+                syncApiOperatory();
+            break;
+        }
     }
 
 

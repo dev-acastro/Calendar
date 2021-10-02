@@ -75,6 +75,7 @@
                 <i class="fa fa-cog fa-w-16 fa-spin fa-2x"></i>
             </button>
         </div>
+
         <div class="app-main">
             <?php
                 include 'sidebar.php';
