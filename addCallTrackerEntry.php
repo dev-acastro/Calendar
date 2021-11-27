@@ -277,14 +277,12 @@
                                                                 class="text-danger">*</span></b></label>
                                                     <div class="col-sm-8">
 
-                                                    <?php if (!empty($seat) && !empty($clinic)){?>
+                                                     <?php if (!empty($seat) && !empty($clinic)){?>
 
                                                         <select class="form-control" id="select_clinic" name="select_clinic" disabled>
-
                                                             <option value="<?php echo $seat;?>" selected><?php echo $clinic;?></option>
                                                         </select>
-
-                                                        <?php  } elseif (empty($seat) && empty($clinic)) {   ?>
+                                                        <?php  } elseif (empty($seat) && empty($clinic)) {   ?> 
 
                                                         <select class="form-control" id="select_clinic"
                                                             name="select_clinic">
@@ -301,9 +299,9 @@
                                                                     }else{
                                                                         ?>
                                                                     <option value="<?php echo $clinic_codigo;?>"><?php echo $clinic_name;?></option>
-                                                                        <?php
+                                                                        <!-- <?php
                                                                     }
-                                                            ?>
+                                                            ?> -->
                                                             
                                                             <?php endwhile; ?>
                                                         </select>
@@ -416,6 +414,7 @@
                                         </div>
 
                                         <h5 class="card-title">SHEDULE APPOINTMENT <span class="text-danger">*</span></h5>
+                                        <p><small> <?php echo isset($inputs['seat'])? $inputs['seat'] : ''?></small></p>
                                         <div class="form-row">
                                             <div class="col-md-4">
                                                 <div class="position-relative form-group">
@@ -425,7 +424,9 @@
                                                                 value="yes" class="custom-control-input">
                                                             <label class="custom-control-label" for="app_yes">Schedule
                                                                 Appointment</label>
+                                                                
                                                         </div>
+                                                        <input name="operatory" id="operatory" type="hidden" value="<?php echo isset($inputs['seat'])? $inputs['seat'] : ''?>">
                                                     </div>
                                                 </div>
                                             </div>
@@ -691,7 +692,8 @@
     <!-- DATEPICKER -->
     <script src="assets/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
     <script type='text/javascript' src="https://rawgit.com/RobinHerbots/jquery.inputmask/3.x/dist/jquery.inputmask.bundle.js"></script>
-    <script type='text/javascript' src="https://rawgit.com/RobinHerbots/jquery.inputmask/3.x/extra/bindings/inputmask.binding.js"></script>
+    <!--<script type='text/javascript' src="https://cdn.jsdelivr.net/gh/RobinHerbots/jquery.inputmask@3.x/extra/bindings/inputmask.binding.js"></script>-->
+    <!--<script type='text/javascript' src="https://rawgit.com/RobinHerbots/jquery.inputmask/3.x/extra/bindings/inputmask.binding.js"></script>-->
 
 
     <script src="calltrackerentry/entry.js"></script>
@@ -706,7 +708,7 @@
     <script>
         $(document).ready(function () {
 
-            $('#example').DataTable();
+            /* $('#example').DataTable();
             $(":input[data-inputmask-mask]").inputmask();
             $(":input[data-inputmask-alias]").inputmask();
 
@@ -717,7 +719,7 @@
                 success: function(response) {
                     console.log(response);
                 }
-            });
+            }); */
 
             seatValue = $('#select_clinic').val()
             if (seatValue!=null) {$('#select_clinic').trigger('change')}

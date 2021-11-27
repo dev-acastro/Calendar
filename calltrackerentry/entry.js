@@ -1,5 +1,6 @@
 $(document).ready(function () {
 
+    
     //=========================== SEARCH PATIENT =========================
     function getPatientStatus(chartid){
         $.ajax({
@@ -507,8 +508,8 @@ $(document).ready(function () {
     //CREAR ID DE PACIENTE
     $("#select_clinic").change(function () {
         var availableDates = [];
-            $('#app_date').datepicker('destroy');
-            $('#app_time').empty();
+           // $('#app_date').datepicker('destroy');
+            //$('#app_time').empty();
             /* $('#app_time').timepicker('destroy'); */
 
         var clinicName = $('#select_clinic option:selected').html();
@@ -864,6 +865,7 @@ $(document).ready(function () {
     //guardar nueva entrada de call tracker
     $("#addEntry").click(function (e) {
         e.preventDefault();
+        
         var tipo = $('[name="pat_type[]"]:checked').val();
         var insurance = $('#pat_have_insurance').val();
         var tipo_insurance = $('#pat_type_insurance').val();
@@ -918,9 +920,11 @@ $(document).ready(function () {
             paciente_relacion_ph: $('#ph_relationship').val(),
             paciente_contacto_ph: $('#ph_phone').val(),
             paciente_birth_ph: $('#ph_dob').val(),
-
+            operatory: $('#operatory').val(),
+            api_id: '',
             color: color,
             call_hizo_cita: hc,
+            
 
             needform: $('#chk_needform').val()
         }
@@ -1009,6 +1013,9 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
+                appID = sendtoApiData(postData);
+                console.log(appID)
+                postData.api_id = appID
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntry.php',
@@ -1073,6 +1080,9 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
+                appID = sendtoApiData(postData);
+                console.log(appID)
+                postData.api_id = appID
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryWithoutApp.php',
@@ -1137,6 +1147,9 @@ $(document).ready(function () {
                     });
                 }
             } */ else {
+                appID = sendtoApiData(postData);
+                console.log(appID)
+                postData.api_id = appID
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryCurrentPatient.php',
@@ -1205,6 +1218,9 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
+                appID = sendtoApiData(postData);
+                console.log(appID)
+                postData.api_id = appID
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryWithoutApp.php',
@@ -1239,4 +1255,20 @@ $(document).ready(function () {
 
     });
 
+    function sendtoApiData(postData) {
+        postData.action = 'newCallEntry';
+        var appointmentID = ''
+         $.ajax({
+            async: false,
+            type: "POST",
+            url: 'calendar/apiData.php',
+            data: postData,
+            dataType: 'JSON',
+            success: function (resp) {
+                console.log(resp)
+                appointmentID = resp
+            }
+        }); 
+        return appointmentID
+    }
 });

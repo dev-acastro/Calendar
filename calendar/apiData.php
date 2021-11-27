@@ -1,25 +1,32 @@
 <?php
 
-
+    
     require '../include/database.php';
 
+    $post = [];
+    $stream = [];
+
     if(!empty($_POST)){
-        $post = $_POST;
+        $post  = $_POST;
     }
     if(!empty($_GET)){
-        $post = $_GET;
+        $post  = $_GET;
+    }
+
+    if (!empty($post['data'])) {
+        $stream = $post['data'];
     }
 
 
 //Constantes a Cambiar
     $token = [];
+    $baseUrl = "https://prod.hs1api.com/ascend-gateway/api/v1/";
     $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
     $client_secret = "IqHYGkvrsN7eFfRe";
     $OrganizationID = "5e7b7774c9e1470c0d716320";
     $locations = [
         "manassas" => "7000000000114",
         "fairfax" => "7000000000115",
-        "woodbridge" => "",
     ];
 
     function getToken($client_id, $client_secret)
@@ -40,27 +47,27 @@
 
     }
 
-    function dateToClinic( string $date) : string
+    function dateApiToClinic( string $date) : string
     {
         $notFormattedDateFromApi = new DateTime($date);
         $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
 
         $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('zulu'));
-        $dateFormatted->setTimezone('America/New_York');
+        $dateFormatted->setTimezone(new DateTimeZone('America/Denver'));
 
         return $dateFormatted->format('Y-m-d H:i:s');
 
     }
 
-    function dateToApi( string $date) : string
+    function dateClinicToApi( string $date) : string
     {
         $notFormattedDateFromApi = new DateTime($date);
         $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
 
-        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('America/New_York'));
-        $dateFormatted->setTimezone('Zulu');
+        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('America/Denver'));
+        $dateFormatted->setTimezone(new DateTimeZone('Zulu'));
 
-        return $dateFormatted->format('Y-m-d\T H:i:s.v\Z');
+        return $dateFormatted->format('Y-m-d\TH:i:s.v\Z');
 
     }
 
@@ -118,7 +125,7 @@
         global $OrganizationID;
         global $token;
 
-        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/patients?filter=chartNumber =='.$chartNumber);
+        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/patients?filter=chartNumber=='.$chartNumber);
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -172,12 +179,14 @@
         return $output;
     }
 
+    
     function p($d) {
         print_r($d);
         die();
     }
 
-    function updateAppointment($data, $id){
+    function updateAppointment($data, $id)
+    {
         global $OrganizationID;
         global $token;
 
@@ -247,16 +256,62 @@
         return $output;
     }
 
-    function findInDatabase($table, $id, $column) {
+    function postApi ($url, $data) 
+    {
+        global $OrganizationID;
+        global $token;
+
+        $curl = curl_init();
+
+        $body = json_encode($data);
+        
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS =>$body,
+            CURLOPT_HTTPHEADER => array(
+                'Organization-ID: ' . $OrganizationID,
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json'
+            ),
+        ));
+
+        $output = curl_exec($curl);
+
+        curl_close($curl);
+
+
+        return $output;
+
+    }
+
+    function findInDatabase($table, $id, $column, $return = false) {
+
         global $conexion;
 
-        $sql = "SELECT * from $table WHERE $column = ?";
-        $conn = $conexion->prepare($sql);
-        $conn->bind_param("s", $id);
-        $conn->execute();
-        $result = $conn->get_result();
+        $sql = "SELECT * from $table WHERE $column = '$id'";
+        $result = $conexion->query($sql);
 
-        return $result;
+        if (!$result) {
+            $error = $conexion->error;
+            echo $error;
+            return false;
+        }
+
+        if ($result->num_rows == 0) {
+            return false;
+        } else {
+            if ($return) {
+                return $result->fetch_all(MYSQLI_ASSOC);
+            }
+            return true;
+        }
     }
 
     function findInDatabaseMax($location) {
@@ -290,29 +345,44 @@
 
         $sql = "INSERT INTO $table ($c) VALUES ($template)";
         $conn = $conexion->prepare($sql);
+        if (!$conn) {
+            $error = $conexion->error;
+            echo $error;
+            return false;
+        }
         $conn->bind_param($values, ...array_values($data));
-        
+        $res = $conn->execute();
         $result = $conn->get_result();
+       
 
-        if ($conn->execute()) {
+        if ($res) {
             return true;
         } else {
            return false;
         }
     }
 
-    function updateInDatabase($table, $data, $id) {
+    function updateInDatabase($table, $data, $id, $column = null): bool {
+        echo "In update Function";
+        
         $values ="";
         global $conexion;
 
         foreach ($data as $key => $value) {
-            $values = empty($values)? "," : "". $key ."=" . $value;
+            $values .= empty($values)? "" : ",";
+            $values .= "$key = '$value'" ;
         }
 
-        $sql = "UPDATE $table SET $values WHERE id = $id ";
+        $columnId = !empty($column) ?? $id;
+
+        $sql = "UPDATE $table SET $values WHERE $column = '$id' ";
         $result = $conexion->query($sql);
+
         if ($result) {
             return true;
+        } else {
+            $error = $conexion->error;
+            return false;
         }
 
 
@@ -376,20 +446,20 @@
         if ($operatories->statusCode == 200) {
             foreach ($operatories->data as $data) {
                 //Buscar Operatory en DB
-                $result = findInDatabase('operatories', $data->id, 'operatory_id');
+                $result = findInDatabase('operatories', $data->id, 'api_id');
 
                 $opArray = [
-                    "operatory_id" => $data->id,
+                    "api_id" => $data->id,
                     'name' => $data->name,
                     'shortName' => $data->shortName,
                     'location_id' => $data->location->id,
                 ];
 
-                if ($result->num_rows == 0) {
+                if (!$result) {
                     $result = insertInDatabase('operatories', $opArray);
                     $rest['status'] = "Success";
                     $rest[]= "New Operatory with id ".$data->id . " and name " . $data->name . " has been added";
-                } elseif ($result->num_rows != 0) {
+                } elseif ($result) {
                     $result = updateInDatabase('operatories', $opArray, $data->id);
                     $rest['status'] = "Success";
                     $rest[]= "Operatory with id ".$data->id . " and name " . $data->name . " has been updated";
@@ -413,18 +483,18 @@
         if ($locations->statusCode == 200) {
             foreach ($locations->data as $data) {
                 //Buscar Operatory en DB
-                $result = findInDatabase('locations', $data->id, 'location_id');
+                $result = findInDatabase('locations', $data->id, 'api_id');
 
                 $loArray = [
-                    "location_id" => $data->id,
+                    "api_id" => $data->id,
                     'name' => $data->name,
                 ];
 
-                if ($result->num_rows == 0) {
+                if (!$result) {
                     $result = insertInDatabase('locations', $loArray);
                     $rest['status'] = "Success";
                     $rest[]= "New Location with id ".$data->id . " and name " . $data->name . " has been added";
-                } elseif ($result->num_rows != 0) {
+                } elseif ($result) {
                     $result = updateInDatabase('locations', $loArray, $data->id);
                     $rest['status'] = "Success";
                     $rest[]= "Location with id ".$data->id . " and name " . $data->name . " has been updated";
@@ -561,6 +631,255 @@
         }
         print_r(json_encode($resSync));
     }
+
+    function reasonsfromdbtoascend () {
+
+        global $locations;
+        global $conexion2;
+        global $conexion;
+        global $token;
+        global $OrganizationID;
+
+
+        $aColorsUrl = 'https://prod.hs1api.com/ascend-gateway/api/v1/colorcategories/';
+        $locationsUrl = 'https://prod.hs1api.com/ascend-gateway/api/v1/locations/';
+        $locationsType = 'LocationV1';
+        $curl = curl_init();
+
+
+        $res = $conexion->query('SELECT * FROM citas_reason');
+
+        $rows =$res->fetch_all(MYSQLI_ASSOC);
+
+        foreach ($rows as $row) {
+
+            $color = substr($row['reason_color'], 1, 6);
+
+            foreach ($locations as $location) {
+                $data = [
+                    "name" => $row['reason_nombre'],
+                    "color" => $color,
+                    "sequence" => 1,
+                    "location" => [
+                        "id" => $location,
+                        "type" => $locationsType,
+                        "url" => $locationsUrl.$location,
+                    ]
+                ];
+
+                curl_setopt_array($curl, array(
+                    CURLOPT_URL => 'https://prod.hs1api.com/ascend-gateway/api/v1/colorcategories',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS =>json_encode($data),
+                    CURLOPT_HTTPHEADER => array(
+                        'Organization-ID: ' . $OrganizationID,
+                        'Authorization: Bearer ' . $token,
+                        'Content-Type: application/json'
+                    ),
+                ));
+
+                $output = curl_exec($curl);
+                curl_close($curl);
+                $output = json_decode($output);
+
+                if ($output->statusCode == "201" ) {
+                    $id = $output->data->id;
+                    $name = $output->data->name;
+                    $query = "UPDATE citas_reason SET api_id = $id WHERE reason_nombre = '$name'";
+
+                    $res = $conexion->query($query);
+
+                    if (!$res) {
+                        echo "\n Error : " .$conexion->error;
+                    } else {
+                        echo "No Error on Query";
+                    }
+                } else {
+                    echo "Error" . "<br>";
+                    echo json_encode($output );
+                }
+                echo "Good" . "<br>";
+                echo json_encode($output);
+            }
+
+        }
+    }
+
+    function managePatient($id, $data) {
+
+        $column = "id_paciente";
+        $PatientData = [
+            "id_paciente" => $data['chartNumber'],
+           //" => $data['id'],
+            "paciente_nombres" => $data['firstName'],
+            "paciente_apellidos" => $data['lastName'] ?? "",
+            "paciente_contacto" => $data['phones'][0]['number'] ?? "",
+            //"sex" => $data['gender'] ?? "",
+            "paciente_fechanac" => $data['dateOfBirth'] ?? "",
+        ];
+        $chartNumber = $PatientData['id_paciente'];
+
+        //We check if Patient is in Database
+        if (!findInDatabase('paciente', $chartNumber , 'id_paciente')) {
+            //Patient is not in database
+            if ( insertInDatabase('paciente', $PatientData)) {
+                echo "Patient Created Successfully";
+            } else {
+                echo "Patient $chartNumber Could Not be Created";
+            }
+        } else {
+            //Patient is in Database, we update it
+            if (updateInDatabase('paciente', $PatientData, $chartNumber, $column)) {
+                echo "Patient Updated Successfully";
+            } else {
+                echo "Patient $id Could Not be Updated";
+            }
+        }
+        
+
+    }
+
+    function manageAppointment ($id, $data) {
+        
+        $operatory = getDataByParam($data['operatory']['url']);
+        $operatory = json_decode($operatory, true);
+        $data['operatoryData'] = $operatory['data'];
+        $clinica = getDataByParam($data['location']['url']);
+        $clinica = json_decode($clinica, true);
+        $data['locationData'] = $clinica['data'];
+        $data['operatoryData']['location'] = $data['locationData']['name'];
+        $patient = getDataByParam($data['patient']['url']);
+        $patient = json_decode($patient, true);
+        $data['PatientData'] = $patient['data'];
+        $location = $data['operatoryData']['shortName'];
+        $locationId = retrieveLocationId($location);
+
+        $appointmentData = [
+            "api_id" => $data['id'],
+            "cita_fecha" => date("Y-m-d",strtotime(dateApiToClinic($data['start']))),
+            "cita_hora" => date("H:i:s",strtotime(dateApiToClinic($data['start']))),
+            "id_paciente" => $data['patient']['chartNumber'],
+            "cita_seat" => $location,
+            "cita_notas" => $data->note ?? "",
+        ];
+
+        $appoId = $appointmentData['api_id'];
+        $column = 'appointment_id';
+
+        
+        //We check if Patient is in Database
+        if (!findInDatabase('citas', $appoId , 'api_id')) {
+            //Patient is not in database
+            if ( insertInDatabase('citas', $appointmentData)) {
+                echo "Appointment Created Successfully";
+            } else {
+                echo "Appointment $appoId Could Not be Created";
+            }
+        } else {
+            //Patient is in Database, we update it
+            if (updateInDatabase('citas', $appointmentData, $appoId, $column)) {
+                echo "Appointment Updated Successfully";
+            } else {
+                echo "Appointment $id Could Not be Updated";
+            }
+        }
+
+
+    }
+
+    function newCallEntry($data) {
+
+        global $locations;
+        global $baseUrl;
+    
+        $operatory = findInDatabase('operatories', $data['operatory'], 'shortName', true);
+        $location_id = $operatory[0]['location_id'];
+
+        $patientData = [
+            'firstName' => $data['paciente_nombres'],
+            'lastName' => $data['paciente_apellidos'],
+            'dateOfBirth' => $data['paciente_fechanac'],
+            'chartNumber' => $data['id_paciente'],
+            'contactMethod'=> 'CALL ME',
+            'patientStatus' => $data['tipo_paciente'],
+            'languageType' => strtoupper($data['paciente_idioma']),
+            'gender' => $data['paciente_genero'],
+            'address1' => 'xxxxxx',
+            'city' => 'xxxxxx',
+            'state' => 'VI',
+            'postalCode' => '00000',
+            'preferredLocation' => [
+                'id' => (int)$location_id,
+                'type'=>'LocationV1',
+                'url'=> $baseUrl.'locations/' . $location_id,
+                
+            ]
+        ];
+
+        $existPatient = getPatientByChartNumber($patientData['chartNumber']);
+        $existPatient = json_decode($existPatient,true);
+        $existPatientData = $existPatient['data'];
+
+        if (count($existPatientData) == 0) {
+            $resultPatient = postApi($baseUrl.'patients', $patientData);
+            $resultPatient = json_decode($resultPatient,true);
+            $patientId = $resultPatient['data']['id'];
+        } else {
+            $patientId = $existPatientData[0]['id'];
+        }
+        
+
+        $start = $data['cita_fecha'] . "  " .  $data['cita_hora'];
+
+         $appointmentData = [
+            'start' => dateClinicToApi($start),
+            'status' => 'UNCONFIRMED',
+            'practiceProcedures' => [
+                [
+                    'id' => (int)'7000000344361',
+                    'type' => 'PracticeProcedureV1',
+                    'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000344361"
+                ]
+            ],
+            'visits' => [],
+            'provider' => [
+                'id' => (int)'7000000067984',
+                'type' => 'ProviderV1',
+                'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000067984"
+            ],
+            'patient' => [
+                'id' => $patientId,
+                'url'=> $baseUrl.'patients/'. $patientId,
+                'type'=>'PatientV1',
+            ],
+            'note' => $data['cita_notas'],
+            'operatory' => [
+                'id' => $operatory[0]['api_id'],
+                'url'=> $baseUrl.'operatories/'. $operatory[0]['api_id'],
+                'type'=>'OperatoryV1',
+            ],
+
+        ]; 
+
+        $resultAppointment = postApi($baseUrl.'appointments', $appointmentData);
+        $resultAppointment = json_decode($resultAppointment, true);
+
+
+        if ($resultAppointment['statusCode'] == 200 or $resultAppointment['statusCode'] == 201) {
+            $appointment_id = $resultAppointment['data']['id'];
+        }
+
+        echo $appointment_id;
+
+    }
+
+
 
     //FINALIZAN TODAS LAS FUNCIONES. SIGUEN LAS ACCIONES Y REDIRECCIONES
 
@@ -699,13 +1018,6 @@
 
     }
 
-    if (isset($post['action']) && $post['action'] == 'syncLocations') {
-        syncApiLocation();
-    }
-
-    if (isset($post['action']) && $post['action'] == 'syncOperatory') {
-        syncApiOperatory();
-    }
 
     if (isset($post['action']) ) {
 
@@ -722,6 +1034,36 @@
             case 'syncoperatory';
                 syncApiOperatory();
             break;
+
+            case 'reasonsdb';
+                reasonsfromdbtoascend();
+            break;
+
+            case 'newCallEntry';
+                newCallEntry($post);
+                break;
+        }
+    }
+
+   
+
+
+    // API Redirections
+    if (isset($stream['type']) ) {
+
+        switch ($stream['type']) {
+
+            case 'PatientV1';
+                managePatient($stream['id'], $stream['payload']);
+                break;
+
+            case 'AppointmentV1';
+                manageAppointment($stream['id'], $stream['payload']);
+                print_r($stream);
+                die();
+                break;
+
+
         }
     }
 

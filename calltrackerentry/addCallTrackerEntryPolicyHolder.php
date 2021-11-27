@@ -139,7 +139,10 @@
                             'cita_hora' => $hora,
                             'cita_duracion' => escapar($_POST['cita_duracion']),
                             'cita_notas' => escapar($_POST['cita_notas']),
-                            'id_user' => escapar($_SESSION['user'])
+                            'id_user' => escapar($_SESSION['user']),
+                            'cita_estado' => 'UNCONFIRMED',
+                            'cita_seat' => escapar($_POST['operatory']),
+                            'api_id' => escapar($_POST['api_id'])
                         );
 
                         $id_cita= insertar($tabla_citas,$campos_cita);

@@ -3,22 +3,15 @@ const { connect } = require('amqplib');
 const axios = require('axios');
 const qs = require('qs');
 const _ = require('lodash');
+const jsdom = require('jsdom');
+const {stringify} = require("qs");
 
-// Before using the Stream API, please verify your account has the Stream API enabled.
-// Contact the Dentrix Ascend team and verify you have access
-// The Stream API is strongly recomended but sometimes it's not always enabled by default.
 
-// To run this example:
-// First edit the client_id and client_secret variables below with the values that you use
 
-// Then open a command line from the the root diretory (where this file is) and type:
-// npm i (assuming you have installed NodeJS)
-// node example-amqp.js 
+const client_id = 'kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89';
+const client_secret = 'IqHYGkvrsN7eFfRe';
 
-const client_id = 'REPLACE_WITH_YOUR_CLIENT_ID';
-const client_secret = 'REPLACE_WITH_YOUR_CLIENT_ID';
 
-// Example runs in prod / sandbox by default but possible to override to run in QA
 let baseUrl = 'https://prod.hs1api.com';
 
 const args = process.argv.slice(2);
@@ -34,7 +27,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
 (async () => {
   try {
 
-    console.log('running with client_id', getConfig('client_id', client_id));
+   // console.log('running with client_id', getConfig('client_id', client_id));
 
     // First get a normal api token just like you're using the normal Ascend Rest API
     const {data: {access_token}} = await axios({
@@ -118,6 +111,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
     // In this example, you will only get messages for the OperatoryV1 and PatientV1 domain types
     await channel.bindQueue(queueName, exchanges, '*.*.OperatoryV1.*');
     await channel.bindQueue(queueName, exchanges, '*.*.PatientV1.*');
+    await channel.bindQueue(queueName, exchanges, '*.*.AppointmentV1.*');
 
     // todo - add any other domain types types (with the versions you are using) or you will not recieve those types of updates
 
@@ -126,7 +120,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
 
     // Now that the queue is created and bound to the right exchange routing keys, you can
     // listen to the queue for any new data that flows through it
-    await channel.consume(queueName, (message) => {
+    await channel.consume(queueName, (message) => {``
       console.log('\nReceived a message from stream API: ');
 
       // uncomment to see entire payload
@@ -140,25 +134,33 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
 
       // Here is the actual message payload
       const payload = JSON.parse(message.content.toString('UTF-8'));
+      sendToSoft(payload);
       // Note that you will only see the fields that have changed.  If a field hasn't been updated, you should not see it in the payload
       console.log(`  payload=${JSON.stringify(payload)}`);      
     });
 
     console.log('Listening to the stream api.  You need to use the normal rest api to save something like a Patient to see data flow.')
 
-
-    // To see messages flow you will need to create, update or delete data in the Ascend rest api.
-    // The initial example only listens to OperatoryV1 or PatientV1 domain models so you will need to test with those domain
-    // types unless you change the queue bindings
-
-    // The simplest way to use the rest api is via https://portal.hs1api.com/ but tools like Postman are easier to use for real development
-    // Make sure that you are updating data for the exact same client_id that you used in this code example - or at least 
-    // a client_id with access to the same organizations
-
-    // Remember that messages only flow for PUT if anything has actually changed
-    
   }
   catch(err){
     console.error('Error in the example program: ', err);
   }
 })();
+
+    function sendToSoft(payload) {
+
+        axios({
+            method: 'post',
+            url: 'http://192.168.1.9/Calendar/Calendar/calendar/apiData.php',
+            data: qs.stringify({
+                data : payload,
+                /*messageType: payload.messageType,
+                type: payload.type,
+                operation: payload.operation,
+                id: payload.id*/
+            })
+        }).then((response) => {
+            console.log(response.data)
+        });
+   }
+

@@ -1,6 +1,7 @@
 <?php
     require("../include/database.php");
     include("../include/funciones.php");
+    include("../calendar/apiData.php");
 
     if(isset($_POST['id_clinica'])){
 
@@ -77,7 +78,7 @@
             'paciente_tiene_seguro'	=> escapar($_POST['paciente_tiene_seguro']),
             'paciente_ciudad'	=> escapar($_POST['paciente_ciudad']),
             'paciente_estado'	=> escapar($_POST['paciente_estado']),
-            'paciente_user'	=> escapar($_SESSION['user'])
+            //'paciente_user'	=> escapar($_SESSION['user'])
         );
 
 
@@ -96,7 +97,7 @@
                 'id_referal_desc' => escapar($_POST['current_patient_referal_id']),
                 'tipo_paciente' => $tipo_paciente,
                 'call_schedule_app' => escapar($_POST['call_hizo_cita']),
-                'call_user' => escapar($_SESSION['user'])
+                //'call_user' => escapar($_SESSION['user'])
             );
             $id_call= insertar($tabla_call_tracker,$campos_call_tracker);
             if($id_call){
@@ -104,7 +105,7 @@
                 $campos_cita = array(
                     'id_paciente' => $id_paciente['idpa'],
                     'id_clinica' => $id_clinica,
-                    'id_user' => escapar($_SESSION['user']),
+                    //'id_user' => escapar($_SESSION['user']),
                     'id_reason' => escapar($_POST['id_reason']),
                     'cita_fecha' => escapar(date('Y-m-d',strtotime($_POST['cita_fecha']))),
                     'cita_hora' => $hora,
@@ -112,7 +113,10 @@
                     'cita_notas' => escapar($_POST['cita_notas']),
                     'cita_provider' => escapar($_POST['cita_provider']),
                     'cita_chat' => escapar($_POST['cita_chat']),
-                    'cita_campaign' => escapar($_POST['cita_campaign'])
+                    'cita_campaign' => escapar($_POST['cita_campaign']),
+                    'cita_estado' => 'UNCONFIRMED',
+                    'cita_seat' => escapar($_POST['operatory']),
+                    'api_id' => escapar($_POST['api_id'])
                 );
                 $id_cita= insertar($tabla_citas,$campos_cita);
 

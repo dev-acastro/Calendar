@@ -294,9 +294,10 @@
                         $("#notSyncedAppointments").show('slow')
                         setTimeout(function(){ $("#notSyncedAppointments").hide("slow"); }, 5000);
                     }
-                    console.log(data.synced);
+                    console.log(data);
                 })
                 .fail(function (data) {
+                    console.log(data)
                     return {};
                 });
             return arreglo
@@ -527,11 +528,9 @@
                 slotMaxTime: '18:00:00',
                 slotDuration: '00:30:00',
                 select: function (info) {
-
                     seat = info.resource.id
                     start = info.start.toISOString().substring(0, 10)
                     time = info.start.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })
-
                     window.location.replace('addCallTrackerEntry.php?start='+start+'&time='+time+'&seat='+seat)
 
                 },
@@ -582,18 +581,11 @@
                     });
                 },
                 events: arrayEvent,
-               /* eventResize : function(data){
-                    updateAppointment(data)
-                },
-                eventDrop : function(data){
-                   updateAppointment(data)
-                },*/
                 eventChange: function(data){
-
                     updateAppointment(data)
                 },
                 eventClick: function(eventClickInfo ){
-                   //$('#modalAppointment').modal();
+                   $('#modalAppointment').modal();
                     console.log(eventClickInfo );
                 },
 

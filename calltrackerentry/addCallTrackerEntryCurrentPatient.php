@@ -148,7 +148,10 @@
                     'id_user' => escapar($_SESSION['user']),
                     'cita_provider' => escapar($_POST['cita_provider']),
                     'cita_chat' => escapar($_POST['cita_chat']),
-                    'cita_campaign' => escapar($_POST['cita_campaign'])
+                    'cita_campaign' => escapar($_POST['cita_campaign']),
+                    'cita_estado' => 'UNCONFIRMED',
+                    'cita_seat' => escapar($_POST['operatory']),
+                    'api_id' => escapar($_POST['api_id'])
                 );
 
                 $id_cita= insertar($tabla_citas,$campos_cita);
