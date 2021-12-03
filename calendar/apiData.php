@@ -29,6 +29,12 @@
         "fairfax" => "7000000000115",
     ];
 
+    $idClinica = [
+        "7000000000114" => '2',
+        "7000000000115" => '1',
+    ];
+
+
     function getToken($client_id, $client_secret)
     {
         $curl = curl_init('https://prod.hs1api.com/oauth/client_credential/accesstoken?grant_type=client_credentials');
@@ -53,7 +59,7 @@
         $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
 
         $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('zulu'));
-        $dateFormatted->setTimezone(new DateTimeZone('America/Denver'));
+        $dateFormatted->setTimezone(new DateTimeZone('America/New_York'));
 
         return $dateFormatted->format('Y-m-d H:i:s');
 
@@ -64,7 +70,7 @@
         $notFormattedDateFromApi = new DateTime($date);
         $formattedDateFromApi = $notFormattedDateFromApi->format('Y-m-d H:i:s');
 
-        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('America/Denver'));
+        $dateFormatted = new DateTime($formattedDateFromApi, new DateTimeZone('America/New_York'));
         $dateFormatted->setTimezone(new DateTimeZone('Zulu'));
 
         return $dateFormatted->format('Y-m-d\TH:i:s.v\Z');
@@ -189,8 +195,11 @@
     {
         global $OrganizationID;
         global $token;
+        global $baseUrl;
 
-        $curl = curl_init('https://prod.hs1api.com/ascend-gateway/api/v1/appointments/'. $id);
+        $url = $baseUrl .'appointments/'.$id;
+
+        $curl = curl_init($url);
         $body = json_encode($data);
 
 
@@ -201,13 +210,14 @@
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
             'Authorization: Bearer '. $token,
             'Organization-ID: '. $OrganizationID,
+            'Accept: application/json',
+            'Content-Type: application/json',
         ));
 
         $output = curl_exec($curl);
 
         curl_close($curl);
 
-        p($output);
         return $output;
     }
 
@@ -314,6 +324,19 @@
         }
     }
 
+    function checkStatus($id, $status) {
+        global $conexion;
+
+        $sql = "SELECT * FROM estados_ascend WHERE cita_api_id = '$id' AND estado = '$status'";
+        $result = $conexion->query($sql);
+
+        if ($result->num_rows == 0) {
+            return false;
+        } 
+
+        return true;
+    }
+
     function findInDatabaseMax($location) {
         global $conexion;
 
@@ -358,6 +381,9 @@
         if ($res) {
             return true;
         } else {
+            $error = $conexion->error;
+            $error2 = $conn->error;
+        
            return false;
         }
     }
@@ -746,31 +772,68 @@
     }
 
     function manageAppointment ($id, $data) {
+
+        global $idClinica;
         
         $operatory = getDataByParam($data['operatory']['url']);
         $operatory = json_decode($operatory, true);
         $data['operatoryData'] = $operatory['data'];
-        $clinica = getDataByParam($data['location']['url']);
-        $clinica = json_decode($clinica, true);
-        $data['locationData'] = $clinica['data'];
-        $data['operatoryData']['location'] = $data['locationData']['name'];
-        $patient = getDataByParam($data['patient']['url']);
-        $patient = json_decode($patient, true);
-        $data['PatientData'] = $patient['data'];
-        $location = $data['operatoryData']['shortName'];
-        $locationId = retrieveLocationId($location);
+        $location = $operatory['data']['shortName'];
+        $idClinic = $idClinica[$operatory['data']['location']['id']];
 
         $appointmentData = [
             "api_id" => $data['id'],
+            'id_clinica' => $idClinic,
             "cita_fecha" => date("Y-m-d",strtotime(dateApiToClinic($data['start']))),
             "cita_hora" => date("H:i:s",strtotime(dateApiToClinic($data['start']))),
-            "id_paciente" => $data['patient']['chartNumber'],
             "cita_seat" => $location,
-            "cita_notas" => $data->note ?? "",
         ];
 
+        if (isset($data['patient'])) {
+            $patient = getDataByParam($data['patient']['url']);
+            $patient = json_decode($patient, true);
+            $data['patientData'] = $patient['data'];
+
+            $appointmentData['id_paciente'] =  $data['patientData']['chartNumber'];
+        }
+
+        if (isset($data['practiceProcedures'])) {
+            $practiceProcedure = end($data['practiceProcedures']);
+
+            $procedure = getDataByParam($practiceProcedure['url']);
+            $procedure = json_decode($procedure, true);
+
+            
+        }
+
+        if (isset($data['note'])) {
+            $appointmentData['cita_notas'] =  $data['note'];
+        }
+
+        if (isset($data['duration'])) {
+            $appointmentData['cita_duracion'] =  $data['duration']. " min";
+        }
+
         $appoId = $appointmentData['api_id'];
-        $column = 'appointment_id';
+        $column = 'api_id';
+
+        if (isset($data['status'])) {
+
+            if (!checkStatus($appoId, $data['status'])) {
+                $estadoData = [
+                    "cita_api_id" => $appointmentData['api_id'],
+                    "estado" => $data["status"],
+                ];
+          
+                insertInDatabase("estados_ascend", $estadoData);
+            }
+            
+           
+
+            $appointmentData['cita_estado'] = $data['status'];
+        }
+
+        
 
         
         //We check if Patient is in Database
@@ -782,7 +845,7 @@
                 echo "Appointment $appoId Could Not be Created";
             }
         } else {
-            //Patient is in Database, we update it
+            //Patient is in Database, we update it // ISSUE // REVISAR CAMBIO COLOR 
             if (updateInDatabase('citas', $appointmentData, $appoId, $column)) {
                 echo "Appointment Updated Successfully";
             } else {
@@ -800,6 +863,7 @@
     
         $operatory = findInDatabase('operatories', $data['operatory'], 'shortName', true);
         $location_id = $operatory[0]['location_id'];
+        $appointment_id = "";
 
         $patientData = [
             'firstName' => $data['paciente_nombres'],
@@ -833,49 +897,55 @@
         } else {
             $patientId = $existPatientData[0]['id'];
         }
+
+        //REVISAR DUPLICACION DE PACIENTES O REESCRITO 
         
+        if (isset($data['withAppo']) && $data['withAppo'] == true) {
+            $start = $data['cita_fecha'] . "  " .  $data['cita_hora'];
 
-        $start = $data['cita_fecha'] . "  " .  $data['cita_hora'];
+            $appointmentData = [
+                'start' => dateClinicToApi($start),
+                'status' => 'UNCONFIRMED',
+                'practiceProcedures' => [
+                    [
+                        'id' => (int)'7000000344361',
+                        'type' => 'PracticeProcedureV1',
+                        'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000344361"
+                    ]
+                ],
+                'visits' => [],
+                'provider' => [
+                    'id' => (int)'7000000067984',
+                    'type' => 'ProviderV1',
+                    'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000067984"
+                ],
+                'patient' => [
+                    'id' => $patientId,
+                    'url'=> $baseUrl.'patients/'. $patientId,
+                    'type'=>'PatientV1',
+                ],
+                'note' => $data['cita_notas'],
+                'operatory' => [
+                    'id' => $operatory[0]['api_id'], // PROVIDER REVIEW
+                    'url'=> $baseUrl.'operatories/'. $operatory[0]['api_id'],
+                    'type'=>'OperatoryV1',
+                ],
 
-         $appointmentData = [
-            'start' => dateClinicToApi($start),
-            'status' => 'UNCONFIRMED',
-            'practiceProcedures' => [
-                [
-                    'id' => (int)'7000000344361',
-                    'type' => 'PracticeProcedureV1',
-                    'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000344361"
-                ]
-            ],
-            'visits' => [],
-            'provider' => [
-                'id' => (int)'7000000067984',
-                'type' => 'ProviderV1',
-                'url' => "https://prod.hs1api.com/ascend-gateway/api/v1/locations/7000000067984"
-            ],
-            'patient' => [
-                'id' => $patientId,
-                'url'=> $baseUrl.'patients/'. $patientId,
-                'type'=>'PatientV1',
-            ],
-            'note' => $data['cita_notas'],
-            'operatory' => [
-                'id' => $operatory[0]['api_id'],
-                'url'=> $baseUrl.'operatories/'. $operatory[0]['api_id'],
-                'type'=>'OperatoryV1',
-            ],
-
-        ]; 
+            ]; 
 
         $resultAppointment = postApi($baseUrl.'appointments', $appointmentData);
         $resultAppointment = json_decode($resultAppointment, true);
 
 
-        if ($resultAppointment['statusCode'] == 200 or $resultAppointment['statusCode'] == 201) {
-            $appointment_id = $resultAppointment['data']['id'];
+
+            if ($resultAppointment['statusCode'] == 200 or $resultAppointment['statusCode'] == 201) {
+                $appointment_id = $resultAppointment['data']['id'];
+            }
         }
 
-        echo $appointment_id;
+        //Revisar Var. 
+
+       echo (string)$appointment_id;
 
     }
 
@@ -922,30 +992,53 @@
     }
 
     if (isset($post['action']) && $post['action'] == 'updateAppointment') {
-    global $token;
-    global $clinica;
+        global $token;
+        global $clinica;
+        global $baseUrl;
 
-    $appointmentId = $post['id'];
-    $data = [];
+        $appointmentId = $post['id'];
+        $data = [];
 
-
-    $currentAppoinment = getDataById("appointments", $appointmentId);
-    $currentAppoinment = json_decode($currentAppoinment);
-
+        $operatoryUrl = $baseUrl.'operatories';
 
 
-    $data['start'] = date('Y-m-d\TH:i:s.000\Z' ,strtotime($post['start']));
-    $data['provider'] = $currentAppoinment->data->provider;
-    $data['operatory'] = $currentAppoinment->data->operatory;
-    $data['patient'] = $currentAppoinment->data->patient;
-    $data['status'] = $currentAppoinment->data->status;
+        $currentAppoinment = getDataById("appointments", $appointmentId);
+        $currentAppoinment = json_decode($currentAppoinment);
 
-    $data['patient']->id = (int) $data['patient']->id;
-    $data['provider']->id = (int) $data['provider']->id;
-    $data['operatory']->id = (int) $data['operatory']->id;
+        $resOpe = findInDatabase('operatories', $post['operatory'], 'shortName', true);
+        
+        $operatory = [
+            'id' =>(int) $resOpe[0]['api_id'],
+            'type' => 'OperatoryV1',
+            'url' => $operatoryUrl
+        ];
 
-    $result = updateAppointment($data, $appointmentId);
-    print_r($result);
+        $data['start'] = dateClinicToApi($post['start']);
+        $data['provider'] = $currentAppoinment->data->provider;
+        $data['patient'] = $currentAppoinment->data->patient;
+        $data['status'] = $currentAppoinment->data->status;
+
+        $data['patient']->id = (int) $data['patient']->id;
+        $data['provider']->id = (int) $data['provider']->id;
+        $data['operatory'] = $operatory;
+
+
+
+        $result = updateAppointment($data, $appointmentId);
+        
+       // $res = updateInDatabase($citas, )
+       // REVISAR SEATS OPERATORY
+       // REVISAR CAMBIO de DURACION
+
+        $result = json_decode($result, true);
+
+        if ($result['statusCode'] == 200 || $result['statusCode'] == 201) {
+            echo "OK";
+        } else {
+            echo "KO";
+        }
+
+        //print_r($result);
     }
 
     if (isset($post['action']) && $post['action'] == 'createAppointment') {
@@ -1059,8 +1152,6 @@
 
             case 'AppointmentV1';
                 manageAppointment($stream['id'], $stream['payload']);
-                print_r($stream);
-                die();
                 break;
 
 

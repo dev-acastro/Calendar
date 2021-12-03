@@ -1,7 +1,6 @@
 <?php
     require("../include/database.php");
     include("../include/funciones.php");
-    include("../calendar/apiData.php");
 
     if(isset($_POST['id_clinica'])){
 

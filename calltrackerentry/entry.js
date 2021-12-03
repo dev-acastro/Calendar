@@ -1013,15 +1013,15 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
-                appID = sendtoApiData(postData);
-                console.log(appID)
-                postData.api_id = appID
+                postData.api_id = sendtoApiData(postData, true);
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntry.php',
                     data: postData,
                     dataType: 'JSON',
                     success: function (resp) {
+                        console.info("ATENCION!!!!! SI ESTAMOS ACA")
+                        console.log(resp)
                         if (resp[0]["response"] == "Success") {
                             swal.fire({
                                 title: "New Call Tracker Entry",
@@ -1044,6 +1044,10 @@ $(document).ready(function () {
                             });
                         }
                     }
+                }).done(function (data){
+                    console.info("ATENCION!!!!! SI ESTAMOS ACA")
+                    console.warning("DONE FUNCTION")
+                    console.log(data)
                 });
             }
 
@@ -1080,9 +1084,7 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
-                appID = sendtoApiData(postData);
-                console.log(appID)
-                postData.api_id = appID
+                postData.api_id = sendtoApiData(postData);
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryWithoutApp.php',
@@ -1147,9 +1149,7 @@ $(document).ready(function () {
                     });
                 }
             } */ else {
-                appID = sendtoApiData(postData);
-                console.log(appID)
-                postData.api_id = appID
+                postData.api_id = sendtoApiData(postData, true)
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryCurrentPatient.php',
@@ -1218,9 +1218,7 @@ $(document).ready(function () {
                     icon: "error"
                 })
             } else {
-                appID = sendtoApiData(postData);
-                console.log(appID)
-                postData.api_id = appID
+                postData.api_id = sendtoApiData(postData)
                 $.ajax({
                     type: "POST",
                     url: 'calltrackerentry/addCallTrackerEntryWithoutApp.php',
@@ -1255,20 +1253,22 @@ $(document).ready(function () {
 
     });
 
-    function sendtoApiData(postData) {
-        postData.action = 'newCallEntry';
-        var appointmentID = ''
-         $.ajax({
-            async: false,
-            type: "POST",
-            url: 'calendar/apiData.php',
-            data: postData,
-            dataType: 'JSON',
-            success: function (resp) {
-                console.log(resp)
-                appointmentID = resp
-            }
-        }); 
-        return appointmentID
-    }
+    
 });
+
+function sendtoApiData(postData, appo = null) {
+    postData.action = 'newCallEntry';
+    postData.withAppo = appo
+    var appointmentID = ''
+     $.ajax({
+        async: false,
+        type: "POST",
+        url: 'calendar/apiData.php',
+        data: postData,
+        dataType: 'JSON',
+        success: function (resp) {
+            appointmentID = resp
+        }
+    }); 
+    return appointmentID
+}

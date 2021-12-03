@@ -245,12 +245,10 @@
 </html>
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
-        $('#notSyncedAppointments').hide()
-        $('#SyncedAppointments').hide()
         $(document).ready(function () {
             var clinica = $("[id^=calendar]").attr("clinica");
             genCalendar("calendar-" + clinica);
-            syncData(clinica);
+         //   syncData(clinica);
         });
 
 
@@ -305,21 +303,33 @@
 
 
         function updateAppointment(info) {
+            
             dataPut = {
                 "id": info.event.id,
                 "start": info.event.startStr,
                 "end": info.event.endStr,
+                "operatory" : info.event._def.resourceIds,
                 "action": "updateAppointment",
             }
             query = param(dataPut)
+
+            
 
             $.ajax({
                 async: false,
                 type: "POST",
                 url: "calendar/apiData.php?",
-                data: query
+                data: query,
             }).done(function (data) {
-                    arreglo = data;
+                    if (data == 'OK') {
+                        swal.fire({
+                                title: "Updated",
+                                text: "Update sucessfully",
+                                icon: "success"
+                            }).then(function () {
+                                location.reload();
+                            });
+                    }
                 })
                 .fail(function (data) {
                     return {};
@@ -419,17 +429,17 @@
             }
             if (clinica == "calendar-manassas") {
                 columnas = [{
-                    id: 'OP 1',
-                    title: 'OP 1'
+                    id: 'OP-1',
+                    title: 'OP-1'
                 }, {
-                    id: 'OP 2',
-                    title: 'OP 2'
+                    id: 'OP-2',
+                    title: 'OP-2'
                 }, {
-                    id: 'OP 3',
-                    title: 'OP 3'
+                    id: 'OP-3',
+                    title: 'OP-3'
                 }, {
-                    id: 'OP 4',
-                    title: 'OP 4'
+                    id: 'OP-4',
+                    title: 'OP-4'
                 }/* , {
                     id: 'OP 5',
                     title: 'OP 5'
@@ -585,8 +595,21 @@
                     updateAppointment(data)
                 },
                 eventClick: function(eventClickInfo ){
-                   $('#modalAppointment').modal();
-                    console.log(eventClickInfo );
+                    Swal.fire({
+                        title: '<strong>'+ eventClickInfo.event.title +'</strong>',
+                        icon: 'info',
+                        html:
+                            '<p>'+ eventClickInfo.event.startStr+ '</p>'    
+                        ,
+                        showCloseButton: true,
+                        showCancelButton: true,
+                        focusConfirm: false,
+                        confirmButtonText:
+                            '<i class="fa fa-thumbs-up"></i> Great!',
+                        confirmButtonAriaLabel: 'Thumbs up, great!',
+                    
+                        })
+                        
                 },
 
             });
