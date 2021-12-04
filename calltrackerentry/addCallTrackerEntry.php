@@ -14,7 +14,7 @@
 
         //Recalcular el id del paciente
         if($id_clinica == 1){
-            $result = $conexion->query('SELECT SUBSTR(id_paciente,3)+1 as cod FROM '.$tabla_pacientes.' WHERE id != "PROCESSING" AND id_clinica='.$id_clinica.' AND SUBSTR(id_paciente,3) BETWEEN 2000 and 2500 AND SUBSTR(id_paciente,3)+1 NOT IN (SELECT SUBSTR(id_paciente,3) FROM '.$tabla_pacientes.' WHERE id_clinica= '.$id_clinica.') ORDER BY id DESC LIMIT 1 FOR UPDATE;');
+            $result = $conexion->query('SELECT SUBSTR(id_paciente,3)+1 as cod FROM '.$tabla_pacientes.' WHERE id != "PROCESSING" AND id_clinica='.$id_clinica.' AND SUBSTR(id_paciente,3) >  2500 AND SUBSTR(id_paciente,3)+1 NOT IN (SELECT SUBSTR(id_paciente,3) FROM '.$tabla_pacientes.' WHERE id_clinica= '.$id_clinica.') ORDER BY id DESC LIMIT 1 FOR UPDATE;');
             if ($id_paciente = $result->fetch_assoc()) {
                 $clinicName = queryOne('SELECT clinica_nombre FROM '.$tabla_clinicas.' WHERE id_clinica = '.$id_clinica.';');
                 $letraI = strtoupper($clinicName['clinica_nombre'][0]);

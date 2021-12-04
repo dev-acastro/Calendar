@@ -18,7 +18,7 @@ if(isset($_POST['idClinica'])){
     /* $sql = 'SELECT start_time,end_time,appointment_notes,appointment_id,patient.patient_id,location_id,confirmation_status,appointment_type_id,patient.first_name as pat_name,patient.last_name as pat_lastname ,
     appt_types.type_color_hex AS color FROM appointment INNER JOIN patient ON patient.patient_id = appointment.patient_id LEFT JOIN appt_types ON appt_types.type_id = appointment.appointment_type_id  WHERE DATE(start_time) = "'.$date_post.'" AND location_id IN ('.$condicion_clinica.');'; */
 
-    $sql = 'SELECT cita_fecha, cita_hora, cita_notas, cita_duracion,  id_cita,  citas.api_id, paciente.id_paciente, cita_seat, cita_estado, citas.id_reason, paciente.paciente_nombres, paciente.paciente_apellidos, citas_reason.reason_color, cita_confirmacion, citas_reason.reason_duracion FROM citas INNER JOIN paciente ON paciente.id_paciente = citas.id_paciente LEFT JOIN citas_reason ON citas_reason.reason_nombre = citas.id_reason WHERE cita_fecha = "'.$date_post.'" AND cita_seat IN ('.$condicion_clinica.');';
+    $sql = 'SELECT cita_fecha, cita_hora, cita_notas, cita_duracion,  id_cita,  citas.api_id, paciente.id_paciente, cita_seat, cita_estado, citas.id_reason, paciente.paciente_nombres, paciente.paciente_apellidos, citas_reason.reason_color, cita_confirmacion, citas_reason.reason_duracion FROM citas INNER JOIN paciente ON paciente.id_paciente = citas.id_paciente INNER JOIN citas_reason ON citas_reason.reason_nombre = citas.id_reason WHERE cita_fecha = "'.$date_post.'" AND cita_seat IN ('.$condicion_clinica.');';
 
     $result = $conexion->query($sql);
     $error = $conexion->error;

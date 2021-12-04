@@ -89,6 +89,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
     // You should add a "." with something afterwards to name your queues
     // The names should be reused / consistent through your applications
     // You can only create a single queue with this name - queue names are globally unique (for your account)
+    //const queueName = `${queues}.testqueue-${Math.random().toString().substring(3, 10)}`;
     const queueName = `${queues}.testqueue-${Math.random().toString().substring(3, 10)}`;
 
     // Assert the queue into existence
@@ -154,10 +155,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
             url: 'http://192.168.1.9/Calendar/Calendar/calendar/apiData.php',
             data: qs.stringify({
                 data : payload,
-                /*messageType: payload.messageType,
-                type: payload.type,
-                operation: payload.operation,
-                id: payload.id*/
+                
             })
         }).then((response) => {
             console.log(response.data)

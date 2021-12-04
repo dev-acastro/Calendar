@@ -13,7 +13,7 @@
 
 
     if($clinica == 1){
-        $result = $conexion->query('SELECT SUBSTR(id_paciente,3)+1 as cod FROM '.$tabla_pacientes.' WHERE id != "PROCESSING" AND id_clinica='.$clinica.' AND SUBSTR(id_paciente,3) BETWEEN 2000 and 2500 AND SUBSTR(id_paciente,3)+1 NOT IN (SELECT SUBSTR(id_paciente,3) FROM '.$tabla_pacientes.' WHERE id_clinica= '.$clinica.') ORDER BY id DESC LIMIT 1 FOR UPDATE;');
+        $result = $conexion->query('SELECT SUBSTR(id_paciente,3)+1 as cod FROM '.$tabla_pacientes.' WHERE id != "PROCESSING" AND id_clinica='.$clinica.' AND SUBSTR(id_paciente,3) > 2500 AND SUBSTR(id_paciente,3)+1 NOT IN (SELECT SUBSTR(id_paciente,3) FROM '.$tabla_pacientes.' WHERE id_clinica= '.$clinica.') ORDER BY id DESC LIMIT 1 FOR UPDATE;');
         if ($id_paciente = $result->fetch_assoc()) {
             $id = $id_paciente['cod'];
             echo $id;

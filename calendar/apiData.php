@@ -21,6 +21,7 @@
 //Constantes a Cambiar
     $token = [];
     $baseUrl = "https://prod.hs1api.com/ascend-gateway/api/v1/";
+    $baseUrlv0 = "https://prod.hs1api.com/ascend-gateway/api/v0/";
     $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
     $client_secret = "IqHYGkvrsN7eFfRe";
     $OrganizationID = "5e7b7774c9e1470c0d716320";
@@ -34,6 +35,8 @@
         "7000000000115" => '1',
     ];
 
+    
+    
 
     function getToken($client_id, $client_secret)
     {
@@ -399,7 +402,7 @@
             $values .= "$key = '$value'" ;
         }
 
-        $columnId = !empty($column) ?? $id;
+        //$columnId = !empty($column) ?? $id;
 
         $sql = "UPDATE $table SET $values WHERE $column = '$id' ";
         $result = $conexion->query($sql);
@@ -408,6 +411,7 @@
             return true;
         } else {
             $error = $conexion->error;
+
             return false;
         }
 
@@ -738,15 +742,13 @@
     }
 
     function managePatient($id, $data) {
-
+        
         $column = "id_paciente";
         $PatientData = [
             "id_paciente" => $data['chartNumber'],
-           //" => $data['id'],
             "paciente_nombres" => $data['firstName'],
             "paciente_apellidos" => $data['lastName'] ?? "",
             "paciente_contacto" => $data['phones'][0]['number'] ?? "",
-            //"sex" => $data['gender'] ?? "",
             "paciente_fechanac" => $data['dateOfBirth'] ?? "",
         ];
         $chartNumber = $PatientData['id_paciente'];
@@ -777,6 +779,7 @@
         
         $operatory = getDataByParam($data['operatory']['url']);
         $operatory = json_decode($operatory, true);
+        print_r($operatory);
         $data['operatoryData'] = $operatory['data'];
         $location = $operatory['data']['shortName'];
         $idClinic = $idClinica[$operatory['data']['location']['id']];
@@ -856,7 +859,7 @@
 
     }
 
-    function newCallEntry($data) {
+    function newCallEntry($data) { 
 
         global $locations;
         global $baseUrl;
@@ -938,15 +941,103 @@
 
 
 
-            if ($resultAppointment['statusCode'] == 200 or $resultAppointment['statusCode'] == 201) {
+            if ($resultAppointment['statusCode'] == 200 || $resultAppointment['statusCode'] == 201) {
                 $appointment_id = $resultAppointment['data']['id'];
             }
         }
 
-        //Revisar Var. 
-
        echo (string)$appointment_id;
 
+    }
+
+    function getTxCases() 
+    {
+        global $baseUrlv0;
+        global $baseUrl;
+        global $OrganizationID;
+        global $token;
+        global $post;
+
+        $chartNumber = $post['chartNumber'];
+
+        $txCasesUrl = $baseUrl.'txcases/';
+        $patientProceduresUrl = $baseUrlv0.'patientprocedures/';
+        $practiceProceduresUrl = $baseUrlv0.'practiceprocedures/';
+        $visitUrl = $baseUrl.'visits/';
+        $patientTeethUrl = $baseUrlv0. 'patientteeth';
+        
+
+        $patient = getPatientByChartNumber($chartNumber);
+        $patient = json_decode($patient, true);
+        $patientId = $patient['data'][0]['id'];
+
+        $txCasesUrl .= '?filter=patient.id=='.$patientId;
+        $patientProceduresUrl .= '?filter=patient.id=='.$patientId;
+        $practiceProceduresUrl .= '?filter=patient.id=='.$patientId; 
+        
+        
+    
+
+        $txCase = getDataByParam($txCasesUrl);
+        $txCase = json_decode($txCase, true)['data'];
+
+        $visitUrl .= '?filter=txCase.id==' . $txCase[0]['id'];
+
+
+        $visits = getDataByParam($visitUrl);
+        $visits = json_decode($visits, true)['data'];
+
+        $patientProcedures = getDataByParam($patientProceduresUrl);
+        $patientProcedures = json_decode($patientProcedures, true)['data'];
+
+        $practiceProcedures = [];
+        $tooth = [];
+
+        foreach ($patientProcedures as $pp) {
+            $practiceProcedures[] = json_decode(getDataByParam($pp['practiceProcedure']['url']), true)['data'];
+        }
+
+        $patientTeeth = json_decode(getDataByParam($patientTeethUrl . '?filter=patient.id==' . $patientId), true)['data'];
+
+        foreach ($patientTeeth as $teeth) {
+            $tooth [$teeth['toothId']] = $teeth;
+        }
+
+
+        $response = [];
+
+
+
+        foreach ($practiceProcedures as $practiceProcedure) {
+            $practice [$practiceProcedure['id']] = $practiceProcedure;
+        }
+
+        foreach ($patientProcedures as $patientprocedure) {
+            $response[] = [
+                'date_planned' => $patientprocedure['entryDate'],
+                'code' => $practice[$patientprocedure['practiceProcedure']['id']]['adaCode'],
+                'description' =>  $practice[$patientprocedure['practiceProcedure']['id']]['description'],
+                'Tooth' => $tooth[$patientprocedure[0]['toothId']],
+                'Surface' => $tooth[$patientprocedure[0]['toothId']]['charting'][0]['surfaces'],
+                'Fee' => $patientprocedure['amount'],
+                'estimated_insurance' => '',
+                'pat' => '',
+
+            ];
+        }
+        
+
+        echo "Response";
+
+        
+
+        
+    }
+
+    function clinicLog()
+    {
+        global $conexion;
+        
     }
 
 
@@ -1116,25 +1207,31 @@
 
         switch ($post['action']) {
 
-            case 'syncolorcategories';
+            case 'syncolorcategories':
                 syncApiColorCategories();
             break;
 
-            case 'synclocations';
+            case 'synclocations':
                 syncApiLocation();
             break;
 
-            case 'syncoperatory';
+            case 'syncoperatory':
                 syncApiOperatory();
             break;
 
-            case 'reasonsdb';
+            case 'reasonsdb':
                 reasonsfromdbtoascend();
             break;
 
-            case 'newCallEntry';
+            case 'newCallEntry':
                 newCallEntry($post);
                 break;
+
+            case 'txcases':
+            getTxCases();
+            break;
+
+            default: echo "Page Not Found"; break;
         }
     }
 

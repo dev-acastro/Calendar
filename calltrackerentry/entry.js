@@ -1028,7 +1028,8 @@ $(document).ready(function () {
                                 html: "Has been entered successfully. <br>Patient with Chart ID <b class='text-alternate'>"+resp[0]["id_generado"]+"</b> has been created",
                                 icon: "success"
                             }).then(function () {
-                                location.reload();
+                               // location.reload();
+                               windows.location = "scheduler.php";
                             });
                         } else if (resp[0]["response"] == "Error") {
                             swal.fire({
