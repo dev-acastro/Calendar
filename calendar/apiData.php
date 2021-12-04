@@ -1004,30 +1004,38 @@
         }
 
 
-        $response = [];
-
+        
 
 
         foreach ($practiceProcedures as $practiceProcedure) {
             $practice [$practiceProcedure['id']] = $practiceProcedure;
         }
 
-        foreach ($patientProcedures as $patientprocedure) {
-            $response[] = [
-                'date_planned' => $patientprocedure['entryDate'],
-                'code' => $practice[$patientprocedure['practiceProcedure']['id']]['adaCode'],
-                'description' =>  $practice[$patientprocedure['practiceProcedure']['id']]['description'],
-                'Tooth' => $tooth[$patientprocedure[0]['toothId']],
-                'Surface' => $tooth[$patientprocedure[0]['toothId']]['charting'][0]['surfaces'],
-                'Fee' => $patientprocedure['amount'],
-                'estimated_insurance' => '',
-                'pat' => '',
+        $response = [];
 
-            ];
+
+        foreach ($patientProcedures as $patientprocedure) {
+
+            if ($patientprocedure['status'] == 'TREATMENT_PLAN' && $patientprocedure['state'] == 'ACTIVE'){
+                $response[] = [
+                    'date_planned' => $patientprocedure['entryDate'],
+                    'code' => $practice[$patientprocedure['practiceProcedure']['id']]['adaCode'],
+                    'description' =>  $practice[$patientprocedure['practiceProcedure']['id']]['description'],
+                    'Tooth' => $tooth[$patientprocedure['procedureTeeth'][0]['toothId']]['toothIndex'],
+                    'Surface' => $tooth[$patientprocedure['procedureTeeth'][0]['toothId']]['chartings'][0]['surfaces'],
+                    'Fee' => $patientprocedure['amount'],
+                    'estimated_insurance' => 0,
+                    'pat' => $patientprocedure['amount'] - 0,
+    
+                ];
+            } 
+            
+            
         }
         
 
-        echo "Response";
+       $response = json_encode($response);
+       echo $response;
 
         
 
