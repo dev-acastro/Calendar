@@ -1,0 +1,17 @@
+{
+    "name": "arturo/calendar",
+    "autoload": {
+        "psr-4": {
+            "Arturo\\Calendar\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "acastro",
+            "email": "acastroxc@gmail.com"
+        }
+    ],
+    "require": {
+        "workerman/phpsocket.io": "^1.1"
+    }
+}

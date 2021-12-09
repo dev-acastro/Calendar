@@ -769,6 +769,14 @@
                 echo "Patient $id Could Not be Updated";
             }
         }
+
+        $logs = [
+            'api_id' => $chartNumber,
+            'tipo' => 'paciente',
+            'user' => 'ascend',
+        ];
+
+        insertInDatabase('historial_cambios', $logs);
         
 
     }
@@ -855,6 +863,14 @@
                 echo "Appointment $id Could Not be Updated";
             }
         }
+
+        $logs = [
+            'api_id' => $appoId,
+            'tipo' => 'cita',
+            'user' => 'ascend',
+        ];
+
+        insertInDatabase('historial_cambios', $logs);
 
 
     }
@@ -1233,7 +1249,7 @@
 
             case 'newCallEntry':
                 newCallEntry($post);
-                break;
+            break;
 
             case 'txcases':
             getTxCases();

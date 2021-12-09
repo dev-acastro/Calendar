@@ -6,6 +6,31 @@ const _ = require('lodash');
 const jsdom = require('jsdom');
 const {stringify} = require("qs");
 
+// Testing WebSockets
+
+const path = require('path');
+const express = require('express');
+const SocketServer = require('ws').Server;
+const app = express();
+
+app.set('port', process.env.PORT || 3000);
+
+const server = app.listen(app.get('port'), ()=>{
+  console.log('Server on Port' + app.get('port'));
+})
+
+const wss = new SocketServer({server})
+
+wss.on('connection', function(ws){
+  console.log('Connection Stablished From Server');
+
+  wss.on('change', (data) => {
+    console.log('Change Detected from Inside')
+    ws.send(data);
+  })
+
+  
+})
 
 
 const client_id = 'kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89';
@@ -136,6 +161,7 @@ const apiTokenUrl = `${baseUrl}/oauth/client_credential/accesstoken`;
       // Here is the actual message payload
       const payload = JSON.parse(message.content.toString('UTF-8'));
       sendToSoft(payload);
+      wss.emit('change', "Data from Api")
       // Note that you will only see the fields that have changed.  If a field hasn't been updated, you should not see it in the payload
       console.log(`  payload=${JSON.stringify(payload)}`);      
     });

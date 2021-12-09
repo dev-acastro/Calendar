@@ -243,13 +243,46 @@
 </body>
 
 </html>
+
 <script type="text/javascript">
+
+    let socket = new WebSocket("ws://localhost:3000/");
+
+    socket.onopen = (e) => {
+       
+
+        const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 5000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.addEventListener('mouseenter', Swal.stopTimer)
+    toast.addEventListener('mouseleave', Swal.resumeTimer)
+  }
+})
+
+Toast.fire({
+  icon: 'success',
+  title: 'Connection with Stream Established'
+})
+    }
+
+    
+
+   
     document.addEventListener('DOMContentLoaded', function () {
         $(document).ready(function () {
             var clinica = $("[id^=calendar]").attr("clinica");
+            
             genCalendar("calendar-" + clinica);
          //   syncData(clinica);
+
         });
+
+        
+
 
 
         function bandera(dato) {
@@ -403,13 +436,17 @@
                 return (h);
             }
 
+          
 
 
         function genCalendar(clinica) {
             var columnas;
             var idClinica;
             var arrayEvent;
+            console.log('In Calendar')
 
+
+           
             if (clinica == "calendar-fairfax") {
                 columnas = [{
                     id: 'FFX1',
@@ -582,14 +619,14 @@
                 editable: true,
                 initialView: 'resourceTimeGridDay',
                 resources: (columnas),
-                eventRender: function(info) {
+                /* eventRender: function(info) {
                     var tooltip = new Tooltip(info.el, {
                     title: info.event.extendedProps.description,
                     placement: 'top',
                     trigger: 'hover',
                     container: 'body'
                     });
-                },
+                }, */
                 events: arrayEvent,
                 eventChange: function(data){
                     updateAppointment(data)
@@ -613,13 +650,60 @@
                 },
 
             });
-            calendar.render();
+           calendar.render();
+            
+            
+            socket.onmessage = (e) => {
+               // genCalendar("calendar-" + clinica);
+                /* swal.fire({
+                    title: "Update",
+                    text: "Update Has been Made, Please Reload the scheduler to see changes",
+                    icon: "success"
+                }).then(function () {
+                    location.reload();
+                });  */
+
+               
+                arrayEvent = genEvent(calendar.getDate(), idClinica);
+                var eventSources = calendar.getEvents();
+                $.each(eventSources, function (index, value) {
+                    eventSources[index].remove();
+                });
+
+                $.each(arrayEvent, function (index, value) {
+                    calendar.addEvent(value);
+                });
+                calendar.refetchEvents();
+
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                })
+
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Update Made'
+                })
+            }
+                
+            
+
         }
+
 
     });
 
-</script>
+    
 
+</script>
+<!-- <script type="text/javascript" src="calendar/socket.js"></script> -->
 <script type="text/javascript">
     $('#exampleModal').on('shown.bs.modal', function () {
         $('#exampleModal').trigger('focus')
