@@ -8,7 +8,6 @@ const {stringify} = require("qs");
 
 // Testing WebSockets
 
-const path = require('path');
 const express = require('express');
 const SocketServer = require('ws').Server;
 const app = express();
@@ -29,10 +28,9 @@ wss.on('connection', function(ws){
     ws.send(data);
   })
 
-  
 })
 
-
+//Stream
 const client_id = 'kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89';
 const client_secret = 'IqHYGkvrsN7eFfRe';
 

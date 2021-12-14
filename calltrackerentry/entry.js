@@ -567,7 +567,7 @@ $(document).ready(function () {
                 }
             });
     
-            /* $('#app_date').change(function (e) {
+             /* $('#app_date').change(function (e) {
                 $('#app_time').empty();
                 const data = {
                     id_clinica: $('#select_clinic').val(),
@@ -586,7 +586,7 @@ $(document).ready(function () {
                     }
     
                 });
-            }); */
+            });  */
         }
 
         else if (patient_type == "Current") {
@@ -620,7 +620,7 @@ $(document).ready(function () {
                 }
             });
     
-            /* $('#app_date').change(function (e) {
+             /* $('#app_date').change(function (e) {
                 $('#app_time').empty();
                 const data = {
                     id_clinica: $('#select_clinic').val(),
@@ -639,7 +639,7 @@ $(document).ready(function () {
                     }
     
                 });
-            }); */
+            }); */ 
         }
     });
 
@@ -1020,8 +1020,7 @@ $(document).ready(function () {
                     data: postData,
                     dataType: 'JSON',
                     success: function (resp) {
-                        console.info("ATENCION!!!!! SI ESTAMOS ACA")
-                        console.log(resp)
+                        
                         if (resp[0]["response"] == "Success") {
                             swal.fire({
                                 title: "New Call Tracker Entry",

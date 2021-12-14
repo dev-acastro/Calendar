@@ -246,7 +246,7 @@
 
 <script type="text/javascript">
 
-    let socket = new WebSocket("ws://localhost:3000/");
+let socket = new WebSocket("ws://localhost:3000/");
 
     socket.onopen = (e) => {
        
@@ -572,8 +572,8 @@ Toast.fire({
                 slotEventOverlap: false,
                 allDaySlot: false,
                 slotMinTime: '07:00:00',
-                slotMaxTime: '18:00:00',
-                slotDuration: '00:30:00',
+                slotMaxTime: '21:00:00',
+                slotDuration: '00:15:00',
                 select: function (info) {
                     seat = info.resource.id
                     start = info.start.toISOString().substring(0, 10)
@@ -654,15 +654,6 @@ Toast.fire({
             
             
             socket.onmessage = (e) => {
-               // genCalendar("calendar-" + clinica);
-                /* swal.fire({
-                    title: "Update",
-                    text: "Update Has been Made, Please Reload the scheduler to see changes",
-                    icon: "success"
-                }).then(function () {
-                    location.reload();
-                });  */
-
                
                 arrayEvent = genEvent(calendar.getDate(), idClinica);
                 var eventSources = calendar.getEvents();
@@ -703,7 +694,6 @@ Toast.fire({
     
 
 </script>
-<!-- <script type="text/javascript" src="calendar/socket.js"></script> -->
 <script type="text/javascript">
     $('#exampleModal').on('shown.bs.modal', function () {
         $('#exampleModal').trigger('focus')
