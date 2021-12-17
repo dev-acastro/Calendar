@@ -113,7 +113,7 @@
             });
 
             $('#appointments').DataTable({
-                    //"responsive":true,
+                    "responsive":true,
                     "order": [
                         [0, "desc"]
                     ],
@@ -268,6 +268,47 @@
 
                     });
                 });
+            });
+
+            $(document).on("click", "#broken", function(e){
+                
+                var api_id = $(this).data('id');
+                Swal.fire({
+                    title: 'Cancel Appointment?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+               
+                showCancelButton: true,
+                confirmButtonText: 'Cancel Appointment',
+                cancelButtonText: `Keep Appointment`,
+                cancelButtonColor: "#C9302C",
+                confirmButtonColor: '#449D44',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                       
+                        $.ajax({
+                            type: "POST",
+                            url: 'calendar/apiData.php',
+                            data: "api_id=" + api_id + "&action=broken",
+                            dataType: 'JSON',
+                            success: function (resp) {
+                                console.log(resp)
+                                if (resp.statusCode == 200 && resp.statusText == "OK") {
+                                    Swal.fire('Saved!', '', 'success')
+                                } else {
+                                    Swal.fire('Changes are not saved', '', 'info')
+                                }
+                            }, 
+                            error: function (error) {
+                                console.log(error)
+                            }
+                        });
+                    
+                    } else if (result.isDismissed) {
+                        
+                        Swal.fire('Changes are not saved', '', 'info')
+                    }
+                })
             });
 
             $('#reschedule').click(function () {

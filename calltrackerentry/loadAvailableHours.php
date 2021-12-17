@@ -9,7 +9,7 @@
     $operatories = $operatoriesQuery->fetch_all(MYSQLI_ASSOC);
     $clinicOperatories = [];
     foreach ($operatories as $operatory) {
-        $clinicOperatories[$operatory->id_clinica] = $operatory["shortName"];
+        $clinicOperatories[$operatory["id_clinica"]][] = $operatory["shortName"];
     }
 
     
@@ -48,21 +48,19 @@
         }
 
         foreach($horas_habiles as $hour){
-             $disponible = $conexion->query('SELECT citas_seat as operatory from '.$tabla_citas.' WHERE cita_fecha = "'.$selected_date.'" AND cita_hora = "'.$hour.'" AND id_clinica = '.$clinica.' ;');
+             $disponible = $conexion->query('SELECT cita_seat as operatory from '.$tabla_citas.' WHERE cita_fecha = "'.$selected_date.'" AND cita_hora = "'.$hour.'" AND id_clinica = '.$clinica.' ;');
+             
              $citasOperatory = $disponible->fetch_all(MYSQLI_ASSOC);
              $operatoriesAvailable = array_diff($clinicOperatories[$clinica], $citasOperatory);
-            if(empty($disponible['total'])){
-                $cantidad = 0;
-            }else{
-                $cantidad = $disponible['total'];
-            }
-            if($cantidad < $limite){
+
+            if(!empty($operatoriesAvailable)){
                 array_push($select_hour,$hour);
 
             } 
 
             $json[]=array(
-                'time' => date('g:i a',strtotime($hour))
+                'time' => date('g:i a',strtotime($hour)),
+                'operatory' => $operatoriesAvailable[0]
             );
         }
 
@@ -83,7 +81,7 @@
            );
        } */
 
-         foreach($select_hour as $h){
+         /* foreach($select_hour as $h){
             $cupo = queryOne('SELECT count(citas.id_cita) as total from citas INNER JOIN citas_estado ON citas.id_cita = citas_estado.id_cita WHERE estado_cita!="Canceled" AND cita_fecha = "'.$selected_date.'" AND cita_hora = "'.$h.'" AND id_clinica = '.$clinica.' group by cita_fecha;');
 
             if(empty($cupo['total'])){
@@ -98,7 +96,7 @@
                 'time' => date('g:i a',strtotime($h)),
                 'available' => $available
             );
-        } 
+        }  */
     }
 
     $jsonstring = json_encode($json);

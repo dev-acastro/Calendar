@@ -22,17 +22,17 @@
     $token = [];
     $baseUrl = "https://prod.hs1api.com/ascend-gateway/api/v1/";
     $baseUrlv0 = "https://prod.hs1api.com/ascend-gateway/api/v0/";
-    $client_id = "kdqoHWRZ1YB5M99QVrtc9p4v2kxSct89";
-    $client_secret = "IqHYGkvrsN7eFfRe";
-    $OrganizationID = "5e7b7774c9e1470c0d716320";
+    $client_id = "QURdW4NMP8nFunWXWb3OlGyE8LWcUrnS";
+    $client_secret = "MK3ZrHePsbvGM5ww";
+    $OrganizationID = "61b7cfbb7caef72b181bb564";
     $locations = [
-        "manassas" => "7000000000114",
-        "fairfax" => "7000000000115",
+        "manassas" => "2000000000375",
+        "fairfax" => "2000000000597",
     ];
 
     $idClinica = [
-        "7000000000114" => '2',
-        "7000000000115" => '1',
+        "2000000000375" => '2',
+        "2000000000597" => '1',
     ];
 
     
@@ -303,6 +303,43 @@
         return $output;
 
     }
+
+    function postStatusBroken () 
+    {
+        global $OrganizationID;
+        global $token;
+        global $post;
+
+        $curl = curl_init();
+
+        
+        
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS =>$body,
+            CURLOPT_HTTPHEADER => array(
+                'Organization-ID: ' . $OrganizationID,
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json'
+            ),
+        ));
+
+        $output = curl_exec($curl);
+
+        curl_close($curl);
+
+
+        return $output;
+
+    }
+
 
     function findInDatabase($table, $id, $column, $return = false) {
 
@@ -1120,18 +1157,29 @@
         $currentAppoinment = getDataById("appointments", $appointmentId);
         $currentAppoinment = json_decode($currentAppoinment);
 
-        $resOpe = findInDatabase('operatories', $post['operatory'], 'shortName', true);
         
-        $operatory = [
-            'id' =>(int) $resOpe[0]['api_id'],
-            'type' => 'OperatoryV1',
-            'url' => $operatoryUrl
-        ];
-
-        $data['start'] = dateClinicToApi($post['start']);
+        if (isset($post['operatory'])) {
+            $resOpe = findInDatabase('operatories', $post['operatory'], 'shortName', true);
+        
+            $operatory = [
+                'id' =>(int) $resOpe[0]['api_id'],
+                'type' => 'OperatoryV1',
+                'url' => $operatoryUrl
+            ];
+        } else {
+            $operatory = $currentAppoinment->data->operatory;
+        }
+        
+     
+        $data['start'] = isset($_POST['start'])?dateClinicToApi($post['start']) : $currentAppoinment->data->start;
         $data['provider'] = $currentAppoinment->data->provider;
         $data['patient'] = $currentAppoinment->data->patient;
-        $data['status'] = $currentAppoinment->data->status;
+        if (isset($_POST['broken'])) {
+            $data['status'] = 'BROKEN';
+        } else {
+            $data['status'] = $currentAppoinment->data->status;
+        }
+       
 
         $data['patient']->id = (int) $data['patient']->id;
         $data['provider']->id = (int) $data['provider']->id;
@@ -1233,6 +1281,10 @@
 
             case 'syncolorcategories':
                 syncApiColorCategories();
+            break;
+
+            case 'broken':
+                postStatusBroken();
             break;
 
             case 'synclocations':

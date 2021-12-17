@@ -46,6 +46,7 @@
 	// getting total number records without any search
 	$result = 'SELECT 
     citas.id_cita as idcita,
+    citas.api_id as api_id,
     citas.id_user as user,
     citas.id_paciente as idpaciente,
     citas.id_reason as reason,
@@ -96,6 +97,7 @@
     while($reg=$queryRecords->fetch_assoc()){
 
         $app_codigo=$reg['idcita'];
+        $app_api_id = $reg['api_id'];
         $app_idclinic=$reg['idclinic'];
         $app_idpatsoft=$reg['idpaciente'];
         $app_idpateagle=$reg['ideagle'];
@@ -202,7 +204,15 @@
                                 data-contacto="'.$contacto.'"
                                 data-clinic="'.$app_idclinic.'"
                                 class="edit btn btn-warning"><i class="fa fa-pencil-alt"></i>
-                            </button>
+                                </button>
+
+                                <button 
+                                    type="button" 
+                                    id="broken" 
+                                    data-id="'.$app_api_id .'"
+                                    class="broken btn btn-danger">
+                                <i class="fas fa-ban"></i>
+                                </button>
                         </div>
                     </div>';
 

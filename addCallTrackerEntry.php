@@ -414,7 +414,8 @@
                                         </div>
 
                                         <h5 class="card-title">SHEDULE APPOINTMENT <span class="text-danger">*</span></h5>
-                                        <p><small> <?php echo isset($inputs['seat'])? $inputs['seat'] : ''?></small></p>
+                                        <p><small id="operatory_text"> <?php echo isset($inputs['seat'])? $inputs['seat'] : ''?></small></p>
+                                        <input name="operatory" id="operatory" type="hidden" value="<?php echo isset($inputs['seat'])? $inputs['seat'] : ''?>">
                                         <div class="form-row">
                                             <div class="col-md-4">
                                                 <div class="position-relative form-group">
@@ -426,7 +427,7 @@
                                                                 Appointment</label>
                                                                 
                                                         </div>
-                                                        <input name="operatory" id="operatory" type="hidden" value="<?php echo isset($inputs['seat'])? $inputs['seat'] : ''?>">
+                                                        
                                                     </div>
                                                 </div>
                                             </div>
@@ -496,6 +497,7 @@
                                                             </select>
                                                         </div>
                                                     </div>
+                                                    <input type="hidden" value="" id="cita_hora" name="cita_hora">
                                                     <div class="position-relative row form-group"><label for=""
                                                             class="col-sm-3 col-form-label"><b>Duration <span
                                                                     class="text-danger">*</span></b></label>

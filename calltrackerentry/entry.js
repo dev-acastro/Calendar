@@ -645,6 +645,7 @@ $(document).ready(function () {
 
     //Define time to Appointment
     $('#app_date').change(function (e) {
+        
         $('#app_time').empty();
         const data = {
             id_clinica: $('#select_clinic').val(),
@@ -657,12 +658,26 @@ $(document).ready(function () {
             data: data,
             dataType: 'JSON',
             success: function (resp) {
-                $(resp).each(function(v){ // valor
-                    $('#app_time').append('<option value="' + (resp[v].time) + '">' + (resp[v].time) + '</option>');
+                $(resp).each(function(index){ // valor
+                    $('#app_time').append('<option value="' + resp[index].time +"/"+resp[index].operatory + '">' + resp[index].time+ '</option>');
                 });
             }
 
         });
+    });
+
+    $('#app_time').change(function (e) {
+        
+        //let valor = $(e.target).val();
+        let valor = $('#app_time').val();
+       
+        let valorArray = valor.split("/") 
+
+        console.log(valorArray)
+
+        $('#cita_hora').val(valorArray[0])
+        $("#operatory").val(valorArray[1])
+        $("#operatory_text").text(valorArray[1])
     });
 
 
@@ -903,7 +918,7 @@ $(document).ready(function () {
 
             id_reason: $('#app_reason').val(),
             cita_fecha: $('#app_date').val(),
-            cita_hora: $('#app_time').val(),
+            cita_hora: $('#cita_hora').val(),
             cita_duracion: $('#app_duration').val(),
             cita_notas: $('#app_notes').val(),
             cita_provider: $('#app_provider').val(),
